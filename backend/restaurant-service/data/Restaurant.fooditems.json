@@ -1,0 +1,42 @@
+[{
+  "_id": {
+    "$oid": "68e2062ccf3d5d59c085fa24"
+  },
+  "restaurant": {
+    "$oid": "68e200a4cf3d5d59c085fa17"
+  },
+  "name": "Bánh Xúc Xích SupperCiu",
+  "description": "bánh hình căn cọc",
+  "price": 1000,
+  "image": "/uploads/1759643180530-483653969.jpg",
+  "category": "FastFood",
+  "availability": true,
+  "createdAt": {
+    "$date": "2025-10-05T05:46:20.540Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-09T01:08:35.849Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68ebd37d9d33cd34787ae7f1"
+  },
+  "restaurant": {
+    "$oid": "68e200a4cf3d5d59c085fa17"
+  },
+  "name": "bánh test 2",
+  "description": "a",
+  "price": 100000,
+  "image": "/uploads/1760285574662-918822968.png",
+  "category": "k bt :v",
+  "availability": true,
+  "createdAt": {
+    "$date": "2025-10-12T16:12:45.119Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-12T16:12:54.666Z"
+  },
+  "__v": 0
+}]

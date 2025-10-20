@@ -1,0 +1,22 @@
+[{
+  "_id": {
+    "$oid": "68e200a4cf3d5d59c085fa17"
+  },
+  "name": "NH1",
+  "ownerName": "Nghia",
+  "location": "Binh Chanh",
+  "contactNumber": "12345",
+  "profilePicture": "/uploads/1759641764355-452841891.png",
+  "admin": {
+    "email": "NH1@gmail.com",
+    "password": "$2b$10$hIq1Ub9bhi.PSGLSmoNDbOimAnZCV0yt4G4Xub6lkrbPhThgQsmEi"
+  },
+  "availability": true,
+  "createdAt": {
+    "$date": "2025-10-05T05:22:44.378Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-05T05:46:30.059Z"
+  },
+  "__v": 0
+}]
