@@ -29,6 +29,32 @@ jobs:
       # 1️⃣ Checkout code
       - uses: actions/checkout@v4
 
+      # Install libcrypto.so.1.1 (libssl1.1) required by mongodb-memory-server
+      - name: Install libcrypto.so.1.1 (libssl1.1)
+        run: |
+          sudo apt-get update
+          # Try to install from apt first
+          if sudo apt-get install -y libssl1.1; then
+            echo "libssl1.1 installed from apt"
+          else
+            echo "libssl1.1 not available from apt — attempting manual download/install"
+            # Attempt to download a compatible deb from Ubuntu archives and install
+            TMP_DEB=/tmp/libssl1.1.deb
+            wget -q -O "$TMP_DEB" "http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb" || {
+              echo "Failed to download libssl1.1 deb. You may need to update the URL to a matching package for the runner."
+              exit 1
+            }
+            sudo dpkg -i "$TMP_DEB" || sudo apt-get -f install -y
+          fi
+          # Verify installation
+          if ldconfig -p | grep -q "libcrypto.so.1.1"; then
+            echo "✅ libcrypto.so.1.1 is available"
+          else
+            echo "⚠️ libcrypto.so.1.1 still not found after install attempt"
+            ldconfig -p
+            exit 1
+          fi
+
       # 2️⃣ Thiết lập Node.js
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
