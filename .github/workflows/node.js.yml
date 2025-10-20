@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
@@ -18,7 +18,6 @@ jobs:
         image: mongo:6.0
         ports:
           - 27017:27017
-        # ✅ Cách 1: healthcheck sử dụng `mongosh` (bản mới của mongo shell)
         options: >-
           --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
           --health-interval 10s
@@ -26,42 +25,18 @@ jobs:
           --health-retries 10
 
     steps:
-      # 1️⃣ Checkout code
       - uses: actions/checkout@v4
 
-      # Install libcrypto.so.1.1 (libssl1.1) required by mongodb-memory-server
       - name: Install libcrypto.so.1.1 (libssl1.1)
         run: |
           sudo apt-get update
-          # Try to install from apt first
-          if sudo apt-get install -y libssl1.1; then
-            echo "libssl1.1 installed from apt"
-          else
-            echo "libssl1.1 not available from apt — attempting manual download/install"
-            # Attempt to download a compatible deb from Ubuntu archives and install
-            TMP_DEB=/tmp/libssl1.1.deb
-            wget -q -O "$TMP_DEB" "http://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb" || {
-              echo "Failed to download libssl1.1 deb. You may need to update the URL to a matching package for the runner."
-              exit 1
-            }
-            sudo dpkg -i "$TMP_DEB" || sudo apt-get -f install -y
-          fi
-          # Verify installation
-          if ldconfig -p | grep -q "libcrypto.so.1.1"; then
-            echo "✅ libcrypto.so.1.1 is available"
-          else
-            echo "⚠️ libcrypto.so.1.1 still not found after install attempt"
-            ldconfig -p
-            exit 1
-          fi
+          sudo apt-get install -y libssl1.1
 
-      # 2️⃣ Thiết lập Node.js
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
-      # 3️⃣ restaurant-service: cache + cài đặt + test
       - name: Cache dependencies for restaurant-service
         uses: actions/cache@v4
         with:
@@ -74,7 +49,6 @@ jobs:
         working-directory: ./backend/restaurant-service
         run: npm ci
 
-      # ✅ Chờ MongoDB khởi động hoàn toàn trước khi test
       - name: Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB to start..."
@@ -93,7 +67,6 @@ jobs:
           MONGODB_URI: mongodb://localhost:27017/testdb
         run: npm test
 
-      # 4️⃣ frontend: cache + install + test
       - name: Cache dependencies for frontend
         uses: actions/cache@v4
         with:
