@@ -1,5 +1,6 @@
 // Import setup (must be first so lifecycle hooks run before tests)
 import './setupMongo.js';
+import { jest } from '@jest/globals';
 jest.setTimeout(30000);
 
 // then other imports

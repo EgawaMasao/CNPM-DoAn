@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-let MongoMemoryServer; // will be required lazily only if needed
+let MongoMemoryServer; // sẽ import động chỉ khi cần
 let mongoServer;
 
 /**
@@ -12,6 +12,7 @@ if (typeof jest !== 'undefined' && typeof jest.setTimeout === 'function') {
 
 beforeAll(async () => {
   const connectOpts = {
+    // Mongoose options; modern mongoose may ignore these but harmless to include
     useNewUrlParser: true,
     useUnifiedTopology: true,
   };
@@ -21,11 +22,12 @@ beforeAll(async () => {
     await mongoose.connect(process.env.MONGODB_URI, connectOpts);
   } else {
     console.log('[setupMongo] No MONGODB_URI — lazily starting mongodb-memory-server');
-    // Lazy-require so import time doesn't trigger binary download when MONGODB_URI exists
-    const mms = require('mongodb-memory-server');
+    // dynamic import để tránh require/import-time khi CI có MONGODB_URI
+    const mms = await import('mongodb-memory-server');
+    // mongodb-memory-server exports differ across versions; try common shapes
     MongoMemoryServer = mms.MongoMemoryServer || mms.default?.MongoMemoryServer || mms;
     mongoServer = await MongoMemoryServer.create();
-    // expose for backwards compatibility if tests reference global.mongoServer
+    // expose cho backward-compatibility nếu tests tham chiếu global.mongoServer
     global.mongoServer = mongoServer;
     const uri = mongoServer.getUri();
     await mongoose.connect(uri, connectOpts);
