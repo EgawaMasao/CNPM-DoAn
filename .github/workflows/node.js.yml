@@ -27,34 +27,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install libcrypto.so.1.1 (libssl1.1)
+      - name: Install libcrypto.so.1.1 (libssl1.1) — robust install
         run: |
+          set -euo pipefail
           sudo apt-get update
+          echo "Attempting to install libssl1.1 from apt..."
           if sudo apt-get install -y libssl1.1; then
             echo "libssl1.1 installed from apt"
           else
             echo "libssl1.1 not available from apt — attempting manual download/install"
             TMP_DEB=/tmp/libssl1.1.deb
-            # fallback mirrors (update if needed)
             urls=(
               "https://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb"
               "https://security.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb"
+              "https://launchpad.net/ubuntu/+archive/primary/+files/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb"
             )
-            downloaded=""
+            downloaded=0
             for url in "${urls[@]}"; do
               echo "Trying $url"
               if curl -fsSL -o "$TMP_DEB" "$url"; then
                 echo "Downloaded $url"
                 downloaded=1
                 break
+              else
+                echo "Failed: $url"
               fi
             done
-            if [ -z "$downloaded" ]; then
-              echo "Failed to download libssl1.1 deb. Consider using runs-on: ubuntu-20.04 or updating the URLs."
+            if [ "$downloaded" -ne 1 ]; then
+              echo "Failed to download libssl1.1 deb. Consider using runs-on: ubuntu-20.04 or providing a correct .deb URL."
               exit 1
             fi
+            echo "Installing downloaded deb..."
             sudo dpkg -i "$TMP_DEB" || sudo apt-get -f install -y
           fi
+          echo "Verifying libcrypto..."
           if ldconfig -p | grep -q "libcrypto.so.1.1"; then
             echo "✅ libcrypto.so.1.1 is available"
           else
