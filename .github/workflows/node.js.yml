@@ -13,34 +13,30 @@ jobs:
       matrix:
         node-version: [18.x, 20.x, 22.x]
 
-    # 🧱 Thêm MongoDB thật làm service chạy song song
     services:
       mongodb:
         image: mongo:6.0
         ports:
           - 27017:27017
-        # ✅ Sửa healthcheck dùng mongosh (cách 1 theo gợi ý của Copilot)
+        # ✅ Cách 1: healthcheck sử dụng `mongosh` (bản mới của mongo shell)
         options: >-
-          --health-cmd "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\""
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
 
     steps:
+      # 1️⃣ Checkout code
       - uses: actions/checkout@v4
 
-      # -------------------------------------------------------
-      # 1️⃣ Cấu hình Node.js cho toàn pipeline
-      # -------------------------------------------------------
+      # 2️⃣ Thiết lập Node.js
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
-      # -------------------------------------------------------
-      # 2️⃣ restaurant-service: setup cache + install + test
-      # -------------------------------------------------------
-      - name: Setup Node.js cache for restaurant-service
+      # 3️⃣ restaurant-service: cache + cài đặt + test
+      - name: Cache dependencies for restaurant-service
         uses: actions/cache@v4
         with:
           path: ./backend/restaurant-service/node_modules
@@ -52,18 +48,27 @@ jobs:
         working-directory: ./backend/restaurant-service
         run: npm ci
 
-      # 🧩 Chạy test với MongoDB thật (thông qua biến môi trường)
-      # ✅ Có thể thêm bước chờ MongoDB nếu cần (tùy chọn)
+      # ✅ Chờ MongoDB khởi động hoàn toàn trước khi test
+      - name: Wait for MongoDB to be ready
+        run: |
+          echo "Waiting for MongoDB to start..."
+          for i in {1..10}; do
+            if mongosh --quiet --eval "db.adminCommand({ ping: 1 })" localhost:27017/testdb; then
+              echo "✅ MongoDB is up!"
+              break
+            fi
+            echo "⏳ Still waiting ($i/10)..."
+            sleep 5
+          done
+
       - name: Run tests for restaurant-service
         working-directory: ./backend/restaurant-service
         env:
           MONGODB_URI: mongodb://localhost:27017/testdb
         run: npm test
 
-      # -------------------------------------------------------
-      # 3️⃣ frontend: setup cache + install + test
-      # -------------------------------------------------------
-      - name: Setup Node.js cache for frontend
+      # 4️⃣ frontend: cache + install + test
+      - name: Cache dependencies for frontend
         uses: actions/cache@v4
         with:
           path: ./frontend/node_modules
