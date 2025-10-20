@@ -1,23 +1,15 @@
-// ...existing code..
+// Import the test setup (must be first import so lifecycle hooks run before tests)
+import './setupMongo.js';
+jest.setTimeout(30000); // đảm bảo timeout đủ lớn cho setup/teardown
+
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from '../src/server.js';
 import Restaurant from '../src/models/Restaurant.js';
 import FoodItem from '../src/models/FoodItem.js';
 
-let mongoServer;
-
-beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri, {});
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
+// Note: removed local mongoServer, beforeAll, afterAll that used MongoMemoryServer
+// setupMongo.js now manages connection/start/stop and cleans between tests
 
 beforeEach(async () => {
   await Restaurant.deleteMany({});
@@ -86,4 +78,3 @@ test('GET /api/food-items/restaurant/:restaurantId trả về đúng các food i
     expect(String(ref)).toBe(String(restaurantId));
   }
 });
-// ...existing code...
