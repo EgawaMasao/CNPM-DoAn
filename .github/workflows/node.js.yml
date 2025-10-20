@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
@@ -30,7 +30,38 @@ jobs:
       - name: Install libcrypto.so.1.1 (libssl1.1)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl1.1
+          if sudo apt-get install -y libssl1.1; then
+            echo "libssl1.1 installed from apt"
+          else
+            echo "libssl1.1 not available from apt — attempting manual download/install"
+            TMP_DEB=/tmp/libssl1.1.deb
+            # fallback mirrors (update if needed)
+            urls=(
+              "https://archive.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb"
+              "https://security.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb"
+            )
+            downloaded=""
+            for url in "${urls[@]}"; do
+              echo "Trying $url"
+              if curl -fsSL -o "$TMP_DEB" "$url"; then
+                echo "Downloaded $url"
+                downloaded=1
+                break
+              fi
+            done
+            if [ -z "$downloaded" ]; then
+              echo "Failed to download libssl1.1 deb. Consider using runs-on: ubuntu-20.04 or updating the URLs."
+              exit 1
+            fi
+            sudo dpkg -i "$TMP_DEB" || sudo apt-get -f install -y
+          fi
+          if ldconfig -p | grep -q "libcrypto.so.1.1"; then
+            echo "✅ libcrypto.so.1.1 is available"
+          else
+            echo "⚠️ libcrypto.so.1.1 still not found after install attempt"
+            ldconfig -p || true
+            exit 1
+          fi
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
