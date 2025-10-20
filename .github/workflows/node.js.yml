@@ -19,11 +19,12 @@ jobs:
         image: mongo:6.0
         ports:
           - 27017:27017
+        # ✅ Sửa healthcheck dùng mongosh (cách 1 theo gợi ý của Copilot)
         options: >-
-          --health-cmd "mongo --eval 'db.runCommand({ ping: 1 })'"
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\""
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +53,7 @@ jobs:
         run: npm ci
 
       # 🧩 Chạy test với MongoDB thật (thông qua biến môi trường)
+      # ✅ Có thể thêm bước chờ MongoDB nếu cần (tùy chọn)
       - name: Run tests for restaurant-service
         working-directory: ./backend/restaurant-service
         env:
