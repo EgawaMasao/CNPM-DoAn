@@ -13,6 +13,18 @@ jobs:
       matrix:
         node-version: [18.x, 20.x, 22.x]
 
+    # 🧱 Thêm MongoDB thật làm service chạy song song
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongo --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -39,8 +51,11 @@ jobs:
         working-directory: ./backend/restaurant-service
         run: npm ci
 
+      # 🧩 Chạy test với MongoDB thật (thông qua biến môi trường)
       - name: Run tests for restaurant-service
         working-directory: ./backend/restaurant-service
+        env:
+          MONGODB_URI: mongodb://localhost:27017/testdb
         run: npm test
 
       # -------------------------------------------------------
