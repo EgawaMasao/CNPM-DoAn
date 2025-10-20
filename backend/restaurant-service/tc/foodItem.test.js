@@ -1,7 +1,8 @@
-// Import the test setup (must be first import so lifecycle hooks run before tests)
+// Import setup (must be first so lifecycle hooks run before tests)
 import './setupMongo.js';
-jest.setTimeout(30000); // đảm bảo timeout đủ lớn cho setup/teardown
+jest.setTimeout(30000);
 
+// then other imports
 import request from 'supertest';
 import mongoose from 'mongoose';
 import app from '../src/server.js';

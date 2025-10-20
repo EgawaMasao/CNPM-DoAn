@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 
+let MongoMemoryServer; // will be required lazily only if needed
 let mongoServer;
 
 /**
  * Increase Jest timeout for slow operations (downloads, DB startup).
- * You can tweak this value if needed.
  */
 if (typeof jest !== 'undefined' && typeof jest.setTimeout === 'function') {
   jest.setTimeout(30000);
@@ -18,19 +17,21 @@ beforeAll(async () => {
   };
 
   if (process.env.MONGODB_URI && process.env.MONGODB_URI.trim() !== '') {
-    console.log('Test setup: connecting to external MongoDB at', process.env.MONGODB_URI);
+    console.log('[setupMongo] Connecting to external MongoDB at', process.env.MONGODB_URI);
     await mongoose.connect(process.env.MONGODB_URI, connectOpts);
   } else {
-    console.log('Test setup: no MONGODB_URI provided — starting mongodb-memory-server');
+    console.log('[setupMongo] No MONGODB_URI — lazily starting mongodb-memory-server');
+    // Lazy-require so import time doesn't trigger binary download when MONGODB_URI exists
+    const mms = require('mongodb-memory-server');
+    MongoMemoryServer = mms.MongoMemoryServer || mms.default?.MongoMemoryServer || mms;
     mongoServer = await MongoMemoryServer.create();
-    // Expose to tests that may reference mongoServer (for backwards compatibility)
+    // expose for backwards compatibility if tests reference global.mongoServer
     global.mongoServer = mongoServer;
     const uri = mongoServer.getUri();
     await mongoose.connect(uri, connectOpts);
   }
 });
 
-// Clean database between tests (safe generic cleanup)
 afterEach(async () => {
   if (!mongoose.connection || mongoose.connection.readyState !== 1) return;
   const collections = Object.keys(mongoose.connection.collections);
