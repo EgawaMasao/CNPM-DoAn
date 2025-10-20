@@ -1,7 +1,7 @@
 # Node.js dependencies
 node_modules/
 npm-debug.log
-package-lock.json
+# package-lock.json
 
 # Logs
 logs/
@@ -9,8 +9,8 @@ logs/
 debug.log
 error.log
 
-# Environment variables
-.env
+# # Environment variables
+# .env
 
 # Database files (if using SQLite or local storage)
 *.sqlite
