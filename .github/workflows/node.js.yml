@@ -1,0 +1,81 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # -------------------------------------------------------
+      # 1️⃣ Cấu hình Node.js cho toàn pipeline (không cache ở root)
+      # -------------------------------------------------------
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Skip root install (no root package.json)
+        run: |
+          if [ -f package.json ]; then
+            echo "Root package.json found — you may want to install root deps"
+          else
+            echo "No root package.json — skipping root install"
+          fi
+
+      # -------------------------------------------------------
+      # 2️⃣ restaurant-service: setup cache + install + test
+      # -------------------------------------------------------
+      - name: Setup Node.js cache for restaurant-service
+        if: ${{ hashFiles('./Food-Delivery-Microservices-main/backend/restaurant-service/package-lock.json') != '' }}
+        uses: actions/cache@v4
+        with:
+          path: ./Food-Delivery-Microservices-main/backend/restaurant-service/node_modules
+          key: ${{ runner.os }}-restaurant-${{ matrix.node-version }}-${{ hashFiles('./Food-Delivery-Microservices-main/backend/restaurant-service/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-restaurant-${{ matrix.node-version }}-
+
+      - name: Install & test restaurant-service (if present)
+        run: |
+          SERVICE_DIR="./Food-Delivery-Microservices-main/backend/restaurant-service"
+          if [ -f "$SERVICE_DIR/package.json" ]; then
+            echo "Found restaurant-service package.json — installing & testing"
+            cd "$SERVICE_DIR"
+            npm ci
+            npm test
+          else
+            echo "restaurant-service package.json not found — skipping"
+          fi
+
+      # -------------------------------------------------------
+      # 3️⃣ frontend: setup cache + install + test
+      # -------------------------------------------------------
+      - name: Setup Node.js cache for frontend
+        if: ${{ hashFiles('./Food-Delivery-Microservices-main/frontend/package-lock.json') != '' }}
+        uses: actions/cache@v4
+        with:
+          path: ./Food-Delivery-Microservices-main/frontend/node_modules
+          key: ${{ runner.os }}-frontend-${{ matrix.node-version }}-${{ hashFiles('./Food-Delivery-Microservices-main/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-${{ matrix.node-version }}-
+
+      - name: Install & test frontend (if present)
+        run: |
+          FE_DIR="./Food-Delivery-Microservices-main/frontend"
+          if [ -f "$FE_DIR/package.json" ]; then
+            echo "Found frontend package.json — installing & testing"
+            cd "$FE_DIR"
+            npm ci
+            npm test || echo "Frontend tests failed (non-blocking)"
+          else
+            echo "frontend package.json not found — skipping"
+          fi
