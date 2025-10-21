@@ -45,10 +45,10 @@ test('GET /api/food-items/restaurant/:restaurantId trả về đúng các food i
   await FoodItem.create({
     _id: new mongoose.Types.ObjectId('68e2062ccf3d5d59c085fa24'),
     restaurant: restaurantId,
-    name: 'Bánh Xúc Xích SupperCiu',
-    description: 'bánh hình căn cọc',
+    name: 'tes1',
+    description: 'tes1',
     price: 1000,
-    image: '/uploads/1759643180530-483653969.jpg',
+    image: '/uploads/1761004777984-992290185.png',
     category: 'FastFood',
     availability: true
   });
@@ -56,11 +56,11 @@ test('GET /api/food-items/restaurant/:restaurantId trả về đúng các food i
   await FoodItem.create({
     _id: new mongoose.Types.ObjectId('68ebd37d9d33cd34787ae7f1'),
     restaurant: restaurantId,
-    name: 'bánh test 2',
-    description: 'a',
+    name: 'test 2',
+    description: 'test2',
     price: 100000,
-    image: '/uploads/1760285574662-918822968.png',
-    category: 'k bt :v',
+    image: '/uploads/1761004850538-75857323.png',
+    category: 'Drinks',
     availability: true
   });
 
@@ -72,7 +72,7 @@ test('GET /api/food-items/restaurant/:restaurantId trả về đúng các food i
   expect(res.body).toHaveLength(2);
 
   const returnedNames = res.body.map(i => i.name).sort();
-  expect(returnedNames).toEqual(['Bánh Xúc Xích SupperCiu', 'bánh test 2'].sort());
+  expect(returnedNames).toEqual(['tes1', 'test 2'].sort());
 
   // Kiểm tra mỗi item tham chiếu tới đúng restaurant
   for (const item of res.body) {
