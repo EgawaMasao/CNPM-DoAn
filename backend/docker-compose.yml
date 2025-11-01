@@ -10,6 +10,16 @@ services:
     depends_on:
       - mongo
 
+  order-service:
+    build:
+      context: ./order-service
+    ports:
+      - "6005:5005"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/order
+    depends_on:
+      - mongo
+
   mongo:
     image: mongo:6.0
     ports:
