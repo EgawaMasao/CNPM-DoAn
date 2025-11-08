@@ -373,8 +373,9 @@ describe('SuperAdmin Routes - DELETE /restaurant/:id', () => {
       .delete('/api/superadmin/restaurant/invalid-id-format')
       .set('Authorization', `Bearer ${validToken}`);
     
-    // THEN: Should return 500 or 404 without crashing (handles invalid ID format)
-    expect([404, 500]).toContain(responseInvalidId.status);
+    // THEN: Should return 500 (CastError from Mongoose for invalid ObjectId format)
+    expect(responseInvalidId.status).toBe(500);
+    expect(responseInvalidId.body.message).toBe('Server Error');
     
     // Verify existing restaurant still intact after invalid ID attempt
     const stillExistsAfterInvalid = await Restaurant.findById(existingRestaurant._id);
@@ -385,8 +386,9 @@ describe('SuperAdmin Routes - DELETE /restaurant/:id', () => {
       .delete('/api/superadmin/restaurant/null')
       .set('Authorization', `Bearer ${validToken}`);
     
-    // THEN: Should handle gracefully without deleting anything
-    expect([400, 404, 500]).toContain(responseNullId.status);
+    // THEN: Should return 500 (CastError from Mongoose for invalid ObjectId format)
+    expect(responseNullId.status).toBe(500);
+    expect(responseNullId.body.message).toBe('Server Error');
     
     // WHEN: Attempting to delete same non-existent ID multiple times (idempotency test)
     const responseSecondAttempt = await request(app)

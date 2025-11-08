@@ -3,6 +3,9 @@ import './setupMongo.js';
 import { jest } from '@jest/globals';
 jest.setTimeout(30000);
 
+// Set JWT_SECRET before importing app
+process.env.JWT_SECRET = 'test-secret-key-for-food-item-testing';
+
 // then other imports
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -15,7 +18,7 @@ import FoodItem from '../src/models/FoodItem.js';
 const generateToken = (userId, role = 'restaurant') => {
   return jwt.sign(
     { id: userId, role: role },
-    process.env.JWT_SECRET || 'test-secret-key',
+    process.env.JWT_SECRET,
     { expiresIn: '1h' }
   );
 };
@@ -90,16 +93,15 @@ describe('FoodItemRoutes - POST /api/food-items/create', () => {
     
     const token = generateToken(restaurantId.toString(), 'restaurant');
     
-    // WHEN: Making POST request without file (req.file is undefined)
+    // WHEN: Making POST request without file (req.file is undefined) using multipart/form-data but no file attached
     const res = await request(app)
       .post('/api/food-items/create')
       .set('Authorization', `Bearer ${token}`)
-      .send({
-        name: 'Burger Without Image',
-        description: 'Missing image',
-        price: 15000,
-        category: 'FastFood'
-      });
+      .field('name', 'Burger Without Image')
+      .field('description', 'Missing image')
+      .field('price', '15000')
+      .field('category', 'FastFood');
+      // NO .attach() call - req.file will be undefined
     
     // THEN: Should return 500 error due to req.file.filename being undefined
     expect(res.status).toBe(500);
