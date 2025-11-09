@@ -267,10 +267,129 @@ jobs:
           echo "Please check the logs above for details."
           exit 1
 
+  order-service-tests:
+    name: Order Service Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_DATABASE: Order
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 40s
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+      fail-fast: false
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: 📦 Install Dependencies
+        working-directory: ./backend/order-service
+        run: npm ci
+
+      - name: ⏳ Wait for MongoDB to be Ready
+        run: |
+          echo "⏳ Waiting for MongoDB to be ready..."
+          sleep 5
+          
+          echo "🔍 Testing MongoDB connection..."
+          node -e "
+            const { MongoClient } = require('mongodb');
+            const client = new MongoClient('mongodb://localhost:27017');
+            client.connect()
+              .then(() => {
+                console.log('✅ MongoDB connection successful!');
+                return client.db('Order').admin().ping();
+              })
+              .then(() => {
+                console.log('✅ MongoDB ping successful!');
+                return client.close();
+              })
+              .catch(err => {
+                console.error('❌ MongoDB connection failed:', err.message);
+                process.exit(1);
+              });
+          "
+        working-directory: ./backend/order-service
+
+      - name: 🧪 Run Order Service Integration Tests
+        working-directory: ./backend/order-service
+        env:
+          MONGO_URI: mongodb://localhost:27017/Order
+          JWT_SECRET: test_secret_key_for_integration_tests_ci_cd
+          PORT: 5001
+          NODE_ENV: test
+        run: |
+          echo "🚀 Running Order Service Integration Tests..."
+          echo "Environment Configuration:"
+          echo "  - MONGO_URI: $MONGO_URI"
+          echo "  - JWT_SECRET: [HIDDEN]"
+          echo "  - PORT: $PORT"
+          echo "  - NODE_ENV: $NODE_ENV"
+          echo ""
+          echo "⚠️ Note: Tests run serially with --runInBand to prevent database race conditions"
+          echo ""
+          npm run test:integration
+
+      - name: 📊 Generate Test Report
+        if: always()
+        working-directory: ./backend/order-service
+        run: |
+          echo "📊 Order Service Test Results Summary:"
+          echo "========================================"
+          echo "Tests completed. Check logs above for details."
+
+      - name: 📈 Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: order-service-test-results-node-${{ matrix.node-version }}
+          path: |
+            backend/order-service/coverage/
+            backend/order-service/*.log
+            backend/order-service/test-*.txt
+          retention-days: 7
+
+      - name: ✅ Order Service Tests Summary
+        if: success()
+        run: |
+          echo "✅ All order service integration tests passed successfully!"
+          echo ""
+          echo "📋 Security Risks Validated (72 tests):"
+          echo "  ✓ RISK-01: JWT Secret Mismatch Between Services (8 tests)"
+          echo "  ✓ RISK-03: Ghost References (No FK Validation) (12 tests)"
+          echo "  ✓ RISK-05: WebSocket Authentication Bypass (13 tests)"
+          echo "  ✓ RISK-07: Payment-Order Status Not Synced (8 tests)"
+          echo "  ✓ RISK-08: MongoDB Isolation Not Enforced (15 tests)"
+          echo "  ✓ RISK-10: CORS Wildcard Allows Any Origin (18 tests)"
+
+      - name: ❌ Order Service Tests Failed
+        if: failure()
+        run: |
+          echo "❌ Order service integration tests failed!"
+          echo "Please check the logs above for details."
+          exit 1
+
   security-analysis:
     name: Security Risk Analysis
     runs-on: ubuntu-latest
-    needs: [restaurant-service-tests, payment-service-tests]
+    needs: [restaurant-service-tests, payment-service-tests, order-service-tests]
     if: always()
     
     steps:
@@ -295,23 +414,32 @@ jobs:
           echo "  • RISK-PAYMENT-04: Webhook Signature Verification Bypass"
           echo "  • RISK-PAYMENT-10: Missing Idempotency Keys"
           echo ""
-          echo "🟡 MEDIUM PRIORITY:"
+          echo "� HIGH PRIORITY - Order Service:"
+          echo "  • RISK-01: JWT Secret Mismatch Between Services"
+          echo "  • RISK-07: Payment-Order Status Not Synchronized"
+          echo "  • RISK-10: CORS Wildcard Allows Any Origin"
+          echo ""
+          echo "�🟡 MEDIUM PRIORITY:"
           echo "  • RISK-03: Restaurant Availability Not Validated"
           echo "  • RISK-04: FoodItem Availability Not Validated"
           echo "  • RISK-PAYMENT-02: Duplicate OrderId Race Conditions"
           echo "  • RISK-PAYMENT-09: Sensitive Data in Logs"
+          echo "  • RISK-03 (Order): Ghost References (No FK Validation)"
+          echo "  • RISK-08: MongoDB Isolation Not Enforced"
           echo ""
           echo "🟢 LOW PRIORITY:"
           echo "  • RISK-02: String-Based Foreign Keys"
+          echo "  • RISK-05 (Order): WebSocket Authentication Documentation"
           echo ""
           echo "💡 Recommendation: Address HIGH priority risks immediately"
           echo ""
-          echo "📊 Total Tests Executed: 93 integration tests"
+          echo "📊 Total Tests Executed: 165 integration tests"
           echo "  - Restaurant Service: 42 tests"
           echo "  - Payment Service: 51 tests"
+          echo "  - Order Service: 72 tests"
 
       - name: 📝 Create Test Failure Summary
-        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure'
+        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure' || needs.order-service-tests.result == 'failure'
         run: |
           echo "## 🚨 Integration Test Failure Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -327,6 +455,9 @@ jobs:
           fi
           if [ "${{ needs.payment-service-tests.result }}" == "failure" ]; then
             echo "- ❌ Payment Service Tests Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.order-service-tests.result }}" == "failure" ]; then
+            echo "- ❌ Order Service Tests Failed" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Action Required" >> $GITHUB_STEP_SUMMARY
@@ -351,13 +482,21 @@ jobs:
           echo "- Webhook Signature Verification" >> $GITHUB_STEP_SUMMARY
           echo "- Sensitive Data Logging" >> $GITHUB_STEP_SUMMARY
           echo "- Missing Idempotency Keys" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Order Service:**" >> $GITHUB_STEP_SUMMARY
+          echo "- JWT Secret Mismatch Between Services" >> $GITHUB_STEP_SUMMARY
+          echo "- Ghost References (No FK Validation)" >> $GITHUB_STEP_SUMMARY
+          echo "- WebSocket Authentication Bypass" >> $GITHUB_STEP_SUMMARY
+          echo "- Payment-Order Status Not Synced" >> $GITHUB_STEP_SUMMARY
+          echo "- MongoDB Isolation Not Enforced" >> $GITHUB_STEP_SUMMARY
+          echo "- CORS Wildcard Allows Any Origin" >> $GITHUB_STEP_SUMMARY
 
       - name: ✅ Create Success Summary
-        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success'
+        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success' && needs.order-service-tests.result == 'success'
         run: |
           echo "## ✅ All Integration Tests Passed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Total: 93 integration tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "**Total: 165 integration tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Restaurant Service (42 tests):" >> $GITHUB_STEP_SUMMARY
           echo "- ✓ RISK-01: JWT Secret Mismatch (7 tests)" >> $GITHUB_STEP_SUMMARY
@@ -374,24 +513,34 @@ jobs:
           echo "- ✓ RISK-PAYMENT-04: Webhook Signature (10 tests)" >> $GITHUB_STEP_SUMMARY
           echo "- ✓ RISK-PAYMENT-09: Sensitive Logging (10 tests)" >> $GITHUB_STEP_SUMMARY
           echo "- ✓ RISK-PAYMENT-10: No Idempotency Key (10 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Order Service (72 tests):" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ RISK-01: JWT Secret Mismatch (8 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ RISK-03: Ghost References (12 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ RISK-05: WebSocket Auth Bypass (13 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ RISK-07: Payment-Order Status (8 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ RISK-08: MongoDB Isolation (15 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ RISK-10: CORS Wildcard (18 tests)" >> $GITHUB_STEP_SUMMARY
 
   notification:
     name: Send Notifications
     runs-on: ubuntu-latest
-    needs: [restaurant-service-tests, payment-service-tests]
+    needs: [restaurant-service-tests, payment-service-tests, order-service-tests]
     if: always()
     
     steps:
       - name: ✅ Success Notification
-        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success'
+        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success' && needs.order-service-tests.result == 'success'
         run: |
           echo "✅ All integration tests passed!"
           echo "   - Restaurant Service: 42 tests"
           echo "   - Payment Service: 51 tests"
+          echo "   - Order Service: 72 tests"
+          echo "   - Total: 165 tests"
           echo "🎉 Great job! The codebase maintains expected behavior for all known vulnerabilities."
 
       - name: ❌ Failure Notification
-        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure'
+        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure' || needs.order-service-tests.result == 'failure'
         run: |
           echo "❌ One or more integration test suites failed!"
           if [ "${{ needs.restaurant-service-tests.result }}" == "failure" ]; then
@@ -399,6 +548,9 @@ jobs:
           fi
           if [ "${{ needs.payment-service-tests.result }}" == "failure" ]; then
             echo "   - Payment Service: FAILED"
+          fi
+          if [ "${{ needs.order-service-tests.result }}" == "failure" ]; then
+            echo "   - Order Service: FAILED"
           fi
           echo "🔍 Please review the test logs and fix the issues."
           echo "⚠️ This may indicate new changes that affect existing vulnerabilities."
