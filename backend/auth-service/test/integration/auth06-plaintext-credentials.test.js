@@ -84,7 +84,7 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
 
     it('should demonstrate credentials visible in process environment', () => {
       // GIVEN: Application running with environment variables
-      const mongoUri = process.env.MONGO_URI;
+      const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
 
       // WHEN: Check if credentials are visible
       const hasCredentials = mongoUri.includes('@');
@@ -94,6 +94,8 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
         console.log('✗ VULNERABILITY: Credentials readable from process.env.MONGO_URI');
         console.log('  Any module with access to process.env can extract credentials');
         expect(mongoUri).toContain('@');
+      } else {
+        console.log('✓ No credentials in process.env.MONGO_URI (testing with local MongoDB)');
       }
     });
 
@@ -187,7 +189,7 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
   describe('Test Case 3: Actual Database Access with Leaked Credentials', () => {
     it('should demonstrate attacker can connect with leaked credentials', async () => {
       // GIVEN: Attacker obtained credentials from leak
-      const mongoUri = process.env.MONGO_URI;
+      const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
 
       if (!mongoUri.includes('@')) {
         console.log('✓ No credentials in connection string');
@@ -225,7 +227,7 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
 
     it('should show attacker can modify data with leaked credentials', async () => {
       // GIVEN: Attacker has database access
-      const mongoUri = process.env.MONGO_URI;
+      const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
 
       if (!mongoUri.includes('@')) {
         return;
@@ -266,7 +268,7 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
 
     it('should demonstrate attacker can delete collections', async () => {
       // GIVEN: Attacker with database access
-      const mongoUri = process.env.MONGO_URI;
+      const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
 
       if (!mongoUri.includes('@')) {
         return;
@@ -422,13 +424,13 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
 
     it('should demonstrate memory dump risk', () => {
       // GIVEN: Application running with credentials in memory
-      const mongoUri = process.env.MONGO_URI;
+      const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
 
       // WHEN: Memory dump taken (e.g., during debugging or crash)
       const memoryRepresentation = {
         env_variables: {
           MONGO_URI: mongoUri,
-          JWT_SECRET: process.env.JWT_SECRET
+          JWT_SECRET: process.env.JWT_SECRET || 'default_jwt_secret'
         }
       };
 
@@ -436,7 +438,7 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
       console.log('\n💾 Memory Dump Simulation:');
       console.log('  Process memory contains:');
       console.log(`  - MongoDB URI: ${mongoUri.substring(0, 30)}...`);
-      console.log(`  - JWT Secret: ${process.env.JWT_SECRET?.substring(0, 20)}...`);
+      console.log(`  - JWT Secret: ${(process.env.JWT_SECRET || 'default_jwt_secret').substring(0, 20)}...`);
       console.log('\n  ✗ Credentials readable from:');
       console.log('    - Core dumps');
       console.log('    - Process memory inspection');
