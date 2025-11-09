@@ -50,8 +50,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-          cache-dependency-path: 'backend/restaurant-service/package-lock.json'
+          # Cache disabled for monorepo - npm ci is fast enough
+          # cache: 'npm'
+          # cache-dependency-path: 'backend/restaurant-service/package-lock.json'
 
       - name: 📦 Install Dependencies
         working-directory: ./backend/restaurant-service
@@ -175,8 +176,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-          cache-dependency-path: 'backend/payment-service/package-lock.json'
+          # Cache disabled for monorepo - npm ci is fast enough
+          # cache: 'npm'
+          # cache-dependency-path: 'backend/payment-service/package-lock.json'
 
       - name: 📦 Install Dependencies
         working-directory: ./backend/payment-service
