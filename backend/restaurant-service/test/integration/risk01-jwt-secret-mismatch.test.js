@@ -58,10 +58,10 @@ describe('RISK-01: JWT Secret Mismatch Integration Test', () => {
   });
 
   test('Should accept token signed with correct JWT_SECRET', async () => {
-    // Get the actual JWT_SECRET being used by the server
-    const JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
+    // Ensure JWT_SECRET is set (should match server configuration)
+    const JWT_SECRET = process.env.JWT_SECRET || 'test_secret_key_for_integration_tests_ci_cd';
     
-    // Token with correct secret matching server configuration
+    // Create token with matching secret and correct payload
     const correctToken = jwt.sign(
       { id: testRestaurant._id.toString(), role: 'restaurant' },
       JWT_SECRET,
@@ -72,15 +72,15 @@ describe('RISK-01: JWT Secret Mismatch Integration Test', () => {
       .get('/api/restaurant/profile')
       .set('Authorization', `Bearer ${correctToken}`);
 
-    // If it still fails, it demonstrates the JWT_SECRET mismatch issue
-    if (response.status === 401) {
-      // This actually proves RISK-01: JWT secret mismatch between services
-      expect(response.status).toBe(401);
-      expect(response.body.message).toMatch(/token|authorization/i);
-    } else {
-      // Token accepted - secrets match
-      expect(response.status).toBe(200);
+    // This test should pass when JWT_SECRET is consistent
+    // If it fails (401), it demonstrates RISK-01: JWT secret mismatch
+    expect([200, 401]).toContain(response.status);
+    
+    if (response.status === 200) {
       expect(response.body.name).toBe('Test Restaurant JWT');
+    } else {
+      // Documents the JWT mismatch risk
+      expect(response.body.message).toMatch(/token|authorization/i);
     }
   });
 
