@@ -82,6 +82,12 @@ jobs:
           NODE_ENV: test
         run: |
           echo "🚀 Running Integration Tests for 6 Critical Risks..."
+          echo "Environment Configuration:"
+          echo "  - MONGO_URI: $MONGO_URI"
+          echo "  - JWT_SECRET: [HIDDEN]"
+          echo "  - PORT: $PORT"
+          echo "  - NODE_ENV: $NODE_ENV"
+          echo ""
           npm test -- test/integration --verbose
 
       - name: 📊 Generate Test Report

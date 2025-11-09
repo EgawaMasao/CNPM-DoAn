@@ -2,5 +2,6 @@
 
 export default {
   testEnvironment: 'node',
-  transform: {}
+  transform: {},
+  setupFiles: ['<rootDir>/jest.setup.js']
 };
