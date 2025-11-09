@@ -106,7 +106,7 @@ jobs:
 
       - name: Install dependencies for payment-service
         working-directory: ./backend/payment-service
-        run: npm ci
+        run: npm install
 
       - name: Run tests for payment-service
         working-directory: ./backend/payment-service
