@@ -386,10 +386,124 @@ jobs:
           echo "Please check the logs above for details."
           exit 1
 
+  auth-service-tests:
+    name: Auth Service Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_DATABASE: Auth
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 40s
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+      fail-fast: false
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: 📦 Install Dependencies
+        working-directory: ./backend/auth-service
+        run: npm ci
+
+      - name: ⏳ Wait for MongoDB to be Ready
+        run: |
+          echo "⏳ Waiting for MongoDB to be ready..."
+          sleep 5
+          
+          echo "🔍 Testing MongoDB connection..."
+          node -e "
+            const { MongoClient } = require('mongodb');
+            const client = new MongoClient('mongodb://localhost:27017');
+            client.connect()
+              .then(() => {
+                console.log('✅ MongoDB connection successful!');
+                return client.db('Auth').admin().ping();
+              })
+              .then(() => {
+                console.log('✅ MongoDB ping successful!');
+                return client.close();
+              })
+              .catch(err => {
+                console.error('❌ MongoDB connection failed:', err.message);
+                process.exit(1);
+              });
+          "
+        working-directory: ./backend/auth-service
+
+      - name: 🧪 Run Auth Service Integration Tests
+        working-directory: ./backend/auth-service
+        env:
+          MONGO_URI: mongodb://localhost:27017/Auth
+          JWT_SECRET: test_secret_key_for_integration_tests_ci_cd
+          PORT: 5000
+          NODE_ENV: test
+        run: |
+          echo "🚀 Running Auth Service Integration Tests..."
+          echo "Environment Configuration:"
+          echo "  - MONGO_URI: $MONGO_URI"
+          echo "  - JWT_SECRET: [HIDDEN]"
+          echo "  - PORT: $PORT"
+          echo "  - NODE_ENV: $NODE_ENV"
+          echo ""
+          npm test -- test/integration
+
+      - name: 📊 Generate Test Report
+        if: always()
+        working-directory: ./backend/auth-service
+        run: |
+          echo "📊 Auth Service Test Results Summary:"
+          echo "========================================"
+          echo "Tests completed. Check logs above for details."
+
+      - name: 📈 Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-service-test-results-node-${{ matrix.node-version }}
+          path: |
+            backend/auth-service/coverage/
+            backend/auth-service/*.log
+          retention-days: 7
+
+      - name: ✅ Auth Service Tests Summary
+        if: success()
+        run: |
+          echo "✅ All auth service integration tests passed successfully!"
+          echo ""
+          echo "📋 Security Risks Validated (50 tests):"
+          echo "  ✓ AUTH-01: JWT Secret Mismatch Between Services (13 tests)"
+          echo "  ✓ AUTH-02: Weak Password Validation (8 tests)"
+          echo "  ✓ AUTH-04: No Rate Limiting (13 tests)"
+          echo "  ✓ AUTH-06: Plaintext Credentials in Storage (16 tests)"
+
+      - name: ❌ Auth Service Tests Failed
+        if: failure()
+        run: |
+          echo "❌ Auth service integration tests failed!"
+          echo "Please check the logs above for details."
+          exit 1
+
   security-analysis:
     name: Security Risk Analysis
     runs-on: ubuntu-latest
-    needs: [restaurant-service-tests, payment-service-tests, order-service-tests]
+    needs: [restaurant-service-tests, payment-service-tests, order-service-tests, auth-service-tests]
     if: always()
     
     steps:
@@ -419,6 +533,12 @@ jobs:
           echo "  • RISK-07: Payment-Order Status Not Synchronized"
           echo "  • RISK-10: CORS Wildcard Allows Any Origin"
           echo ""
+          echo "� HIGH PRIORITY - Auth Service:"
+          echo "  • AUTH-01: JWT Secret Mismatch Between Services"
+          echo "  • AUTH-02: Weak Password Validation"
+          echo "  • AUTH-04: No Rate Limiting on Authentication"
+          echo "  • AUTH-06: Plaintext Credentials in Storage"
+          echo ""
           echo "�🟡 MEDIUM PRIORITY:"
           echo "  • RISK-03: Restaurant Availability Not Validated"
           echo "  • RISK-04: FoodItem Availability Not Validated"
@@ -433,13 +553,14 @@ jobs:
           echo ""
           echo "💡 Recommendation: Address HIGH priority risks immediately"
           echo ""
-          echo "📊 Total Tests Executed: 165 integration tests"
+          echo "📊 Total Tests Executed: 215 integration tests"
           echo "  - Restaurant Service: 42 tests"
           echo "  - Payment Service: 51 tests"
           echo "  - Order Service: 72 tests"
+          echo "  - Auth Service: 50 tests"
 
       - name: 📝 Create Test Failure Summary
-        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure' || needs.order-service-tests.result == 'failure'
+        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure' || needs.order-service-tests.result == 'failure' || needs.auth-service-tests.result == 'failure'
         run: |
           echo "## 🚨 Integration Test Failure Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -458,6 +579,9 @@ jobs:
           fi
           if [ "${{ needs.order-service-tests.result }}" == "failure" ]; then
             echo "- ❌ Order Service Tests Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.auth-service-tests.result }}" == "failure" ]; then
+            echo "- ❌ Auth Service Tests Failed" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Action Required" >> $GITHUB_STEP_SUMMARY
@@ -490,13 +614,19 @@ jobs:
           echo "- Payment-Order Status Not Synced" >> $GITHUB_STEP_SUMMARY
           echo "- MongoDB Isolation Not Enforced" >> $GITHUB_STEP_SUMMARY
           echo "- CORS Wildcard Allows Any Origin" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Auth Service:**" >> $GITHUB_STEP_SUMMARY
+          echo "- JWT Secret Mismatch" >> $GITHUB_STEP_SUMMARY
+          echo "- Weak Password Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- No Rate Limiting" >> $GITHUB_STEP_SUMMARY
+          echo "- Plaintext Credentials Storage" >> $GITHUB_STEP_SUMMARY
 
       - name: ✅ Create Success Summary
-        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success' && needs.order-service-tests.result == 'success'
+        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success' && needs.order-service-tests.result == 'success' && needs.auth-service-tests.result == 'success'
         run: |
           echo "## ✅ All Integration Tests Passed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Total: 165 integration tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "**Total: 215 integration tests passed successfully!**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Restaurant Service (42 tests):" >> $GITHUB_STEP_SUMMARY
           echo "- ✓ RISK-01: JWT Secret Mismatch (7 tests)" >> $GITHUB_STEP_SUMMARY
@@ -521,26 +651,33 @@ jobs:
           echo "- ✓ RISK-07: Payment-Order Status (8 tests)" >> $GITHUB_STEP_SUMMARY
           echo "- ✓ RISK-08: MongoDB Isolation (15 tests)" >> $GITHUB_STEP_SUMMARY
           echo "- ✓ RISK-10: CORS Wildcard (18 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Auth Service (50 tests):" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ AUTH-01: JWT Secret Mismatch (13 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ AUTH-02: Weak Password Validation (8 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ AUTH-04: No Rate Limiting (13 tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ AUTH-06: Plaintext Credentials (16 tests)" >> $GITHUB_STEP_SUMMARY
 
   notification:
     name: Send Notifications
     runs-on: ubuntu-latest
-    needs: [restaurant-service-tests, payment-service-tests, order-service-tests]
+    needs: [restaurant-service-tests, payment-service-tests, order-service-tests, auth-service-tests]
     if: always()
     
     steps:
       - name: ✅ Success Notification
-        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success' && needs.order-service-tests.result == 'success'
+        if: needs.restaurant-service-tests.result == 'success' && needs.payment-service-tests.result == 'success' && needs.order-service-tests.result == 'success' && needs.auth-service-tests.result == 'success'
         run: |
           echo "✅ All integration tests passed!"
           echo "   - Restaurant Service: 42 tests"
           echo "   - Payment Service: 51 tests"
           echo "   - Order Service: 72 tests"
-          echo "   - Total: 165 tests"
+          echo "   - Auth Service: 50 tests"
+          echo "   - Total: 215 tests"
           echo "🎉 Great job! The codebase maintains expected behavior for all known vulnerabilities."
 
       - name: ❌ Failure Notification
-        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure' || needs.order-service-tests.result == 'failure'
+        if: needs.restaurant-service-tests.result == 'failure' || needs.payment-service-tests.result == 'failure' || needs.order-service-tests.result == 'failure' || needs.auth-service-tests.result == 'failure'
         run: |
           echo "❌ One or more integration test suites failed!"
           if [ "${{ needs.restaurant-service-tests.result }}" == "failure" ]; then
@@ -551,6 +688,9 @@ jobs:
           fi
           if [ "${{ needs.order-service-tests.result }}" == "failure" ]; then
             echo "   - Order Service: FAILED"
+          fi
+          if [ "${{ needs.auth-service-tests.result }}" == "failure" ]; then
+            echo "   - Auth Service: FAILED"
           fi
           echo "🔍 Please review the test logs and fix the issues."
           echo "⚠️ This may indicate new changes that affect existing vulnerabilities."
