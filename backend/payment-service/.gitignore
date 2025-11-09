@@ -1,7 +1,8 @@
 # Node.js dependencies
 node_modules/
 npm-debug.log
-package-lock.json
+# package-lock.json should be committed for npm ci to work
+# package-lock.json
 
 # Logs
 logs/
