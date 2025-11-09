@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+
+  # Restaurant-service
+  restaurant-service:
+    build:
+      context: ./restaurant-service
+      dockerfile: Dockerfile
+    container_name: restaurant-service
+    restart: unless-stopped
+    ports:
+      - "6002:5002"
+    volumes:
+      - ./restaurant-service/uploads:/app/uploads
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/Restaurant
+      - PORT=5002
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongo
+
+  # Order-service
+  order-service:
+    build:
+      context: ./order-service
+    container_name: order-service
+    restart: unless-stopped
+    ports:
+      - "6005:5005"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/Order
+      - PORT=5005
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - mongo
+
+  # Auth-service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:4000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/Auth
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=7d
+    depends_on:
+      - mongo
+
+  # Payment-service
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    restart: unless-stopped
+    ports:
+      - "6004:5004"
+    environment:
+      
+
+  # MongoDB
+  mongo: 
+    image: mongo:6.0
+    ports:
+      - "27017:27017"

@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  restaurant-service:
+    build:
+      context: ./restaurant-service
+    ports:
+      - "6002:5002"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/Restaurant
+    depends_on:
+      - mongo
+
+  order-service:
+    build:
+      context: ./order-service
+    ports:
+      - "6005:5005"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/Order
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
