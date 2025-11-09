@@ -74,6 +74,27 @@ jobs:
           MONGODB_URI: mongodb://localhost:27017/testdb
         run: npm test
 
+      # backend/order-service: cache, install, test (connect to service MongoDB)
+      - name: Cache dependencies for order-service
+        uses: actions/cache@v4
+        with:
+          path: ./backend/order-service/node_modules
+          key: ${{ runner.os }}-order-${{ matrix.node-version }}-${{ hashFiles('./backend/order-service/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-order-${{ matrix.node-version }}-
+
+      - name: Install dependencies for order-service
+        working-directory: ./backend/order-service
+        run: npm ci
+
+      - name: Run tests for order-service
+        working-directory: ./backend/order-service
+        env:
+          # Ensure tests connect to the mongo:6.0 service container instead of spawning mongodb-memory-server
+          MONGODB_URI: mongodb://localhost:27017/testdb
+          JWT_SECRET: test-secret-key-for-ci
+        run: npm test
+
       # frontend: cache, install, test (allow no-tests)
       - name: Cache dependencies for frontend
         uses: actions/cache@v4
