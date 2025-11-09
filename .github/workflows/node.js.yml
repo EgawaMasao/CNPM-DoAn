@@ -44,7 +44,7 @@ jobs:
 
       - name: Install dependencies for restaurant-service
         working-directory: ./backend/restaurant-service
-        run: npm ci
+        run: npm install
 
       - name: Wait for MongoDB to be ready
         run: |
@@ -85,7 +85,7 @@ jobs:
 
       - name: Install dependencies for order-service
         working-directory: ./backend/order-service
-        run: npm ci
+        run: npm install
 
       - name: Run tests for order-service
         working-directory: ./backend/order-service
@@ -135,7 +135,7 @@ jobs:
 
       - name: Install dependencies for auth-service
         working-directory: ./backend/auth-service
-        run: npm ci
+        run: npm install
 
       - name: Run tests for auth-service
         working-directory: ./backend/auth-service
@@ -156,7 +156,7 @@ jobs:
 
       - name: Install dependencies for frontend
         working-directory: ./frontend
-        run: npm ci
+        run: npm install
 
       - name: Run tests for frontend
         working-directory: ./frontend
