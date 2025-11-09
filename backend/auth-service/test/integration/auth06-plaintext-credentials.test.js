@@ -32,11 +32,15 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
   let originalMongoUri;
 
   beforeAll(async () => {
-    originalMongoUri = process.env.MONGO_URI;
-    await mongoose.connect(originalMongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    originalMongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
+    
+    // Only connect if not already connected
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(originalMongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+    }
 
     await Customer.deleteMany({ email: /^creds_test_/ });
   }, 30000);
@@ -49,7 +53,7 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
   describe('Test Case 1: Credential Extraction from Connection String', () => {
     it('should extract username and password from MONGO_URI', () => {
       // GIVEN: Connection string with embedded credentials
-      const mongoUri = process.env.MONGO_URI;
+      const mongoUri = originalMongoUri || process.env.MONGO_URI || 'mongodb://localhost:27017/Auth';
       console.log('Connection String:', mongoUri);
 
       // WHEN: Parse connection string
