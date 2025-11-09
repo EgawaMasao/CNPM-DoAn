@@ -3,6 +3,9 @@ module.exports = {
   coveragePathIgnorePatterns: ['/node_modules/'],
   testTimeout: 30000, // 30 seconds timeout for integration tests
   
+  // Setup file to load test environment
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  
   // Separate test patterns
   testMatch: [
     '**/__tests__/**/*.test.js',

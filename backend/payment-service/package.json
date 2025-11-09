@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:unit": "jest --testPathIgnorePatterns=__tests__/integration",
     "test:integration": "jest __tests__/integration --runInBand",
     "start": "node server.js",
