@@ -59,19 +59,31 @@ jobs:
 
       - name: ⏳ Wait for MongoDB to be Ready
         run: |
-          echo "⏳ Waiting for MongoDB to start..."
-          for i in {1..30}; do
-            if mongosh --quiet --eval "db.adminCommand({ ping: 1 })" mongodb://localhost:27017/Restaurant; then
-              echo "✅ MongoDB is ready!"
-              break
-            fi
-            echo "⏳ Still waiting for MongoDB... ($i/30)"
-            sleep 2
-          done
+          echo "⏳ Waiting for MongoDB to be ready..."
+          # The service container already has health checks configured
+          # Just give it a few extra seconds to be safe
+          sleep 5
           
-          # Verify connection
-          echo "🔍 Testing MongoDB connection..."
-          mongosh --quiet --eval "db.version()" mongodb://localhost:27017/Restaurant
+          # Test connection using Node.js (already installed)
+          echo "🔍 Testing MongoDB connection with Node.js..."
+          node -e "
+            const { MongoClient } = require('mongodb');
+            const client = new MongoClient('mongodb://localhost:27017');
+            client.connect()
+              .then(() => {
+                console.log('✅ MongoDB connection successful!');
+                return client.db('Restaurant').admin().ping();
+              })
+              .then(() => {
+                console.log('✅ MongoDB ping successful!');
+                return client.close();
+              })
+              .catch(err => {
+                console.error('❌ MongoDB connection failed:', err.message);
+                process.exit(1);
+              });
+          "
+        working-directory: ./backend/restaurant-service
 
       - name: 🧪 Run Integration Tests
         working-directory: ./backend/restaurant-service
