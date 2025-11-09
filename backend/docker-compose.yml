@@ -10,7 +10,7 @@ services:
     container_name: restaurant-service
     restart: unless-stopped
     ports:
-      - "5002:5002"
+      - "6002:5002"
     volumes:
       - ./restaurant-service/uploads:/app/uploads
     environment:
