@@ -1,5 +1,8 @@
 # SkyDish – Food Delivery Microservices
 
+[![Node.js CI](https://github.com/EgawaMasao/CNPM-DoAn/actions/workflows/node.js.yml/badge.svg)](https://github.com/EgawaMasao/CNPM-DoAn/actions/workflows/node.js.yml)
+[![Integration Tests](https://github.com/EgawaMasao/CNPM-DoAn/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/EgawaMasao/CNPM-DoAn/actions/workflows/integration-tests.yml)
+
 A cloud‐native, microservices‐based food ordering & delivery platform.  
 Supports four roles: Customer, Restaurant Admin, Delivery Personnel, Super Admin.
 

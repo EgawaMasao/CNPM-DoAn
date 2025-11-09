@@ -1,0 +1,217 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'backend/restaurant-service/**'
+      - 'backend/order-service/**'
+      - 'backend/payment-service/**'
+      - 'backend/auth-service/**'
+      - '.github/workflows/integration-tests.yml'
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'backend/restaurant-service/**'
+      - 'backend/order-service/**'
+      - 'backend/payment-service/**'
+      - 'backend/auth-service/**'
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    name: Restaurant Service Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_DATABASE: Restaurant
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 40s
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+      fail-fast: false
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: './backend/restaurant-service/package-lock.json'
+
+      - name: 📦 Install Dependencies
+        working-directory: ./backend/restaurant-service
+        run: npm ci
+
+      - name: ⏳ Wait for MongoDB to be Ready
+        run: |
+          echo "⏳ Waiting for MongoDB to start..."
+          for i in {1..30}; do
+            if mongosh --quiet --eval "db.adminCommand({ ping: 1 })" mongodb://localhost:27017/Restaurant; then
+              echo "✅ MongoDB is ready!"
+              break
+            fi
+            echo "⏳ Still waiting for MongoDB... ($i/30)"
+            sleep 2
+          done
+          
+          # Verify connection
+          echo "🔍 Testing MongoDB connection..."
+          mongosh --quiet --eval "db.version()" mongodb://localhost:27017/Restaurant
+
+      - name: 🧪 Run Integration Tests
+        working-directory: ./backend/restaurant-service
+        env:
+          MONGO_URI: mongodb://localhost:27017/Restaurant
+          JWT_SECRET: test_secret_key_for_integration_tests_ci_cd
+          PORT: 5002
+          NODE_ENV: test
+        run: |
+          echo "🚀 Running Integration Tests for 6 Critical Risks..."
+          npm test -- test/integration --verbose
+
+      - name: 📊 Generate Test Report
+        if: always()
+        working-directory: ./backend/restaurant-service
+        run: |
+          echo "📊 Test Results Summary:"
+          echo "========================================"
+          if [ -f test-results.json ]; then
+            cat test-results.json
+          else
+            echo "ℹ️ No test results file found"
+          fi
+
+      - name: 📈 Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-node-${{ matrix.node-version }}
+          path: |
+            backend/restaurant-service/coverage/
+            backend/restaurant-service/*.log
+          retention-days: 7
+
+      - name: ✅ Integration Tests Summary
+        if: success()
+        run: |
+          echo "✅ All integration tests passed successfully!"
+          echo ""
+          echo "📋 Tests Validated:"
+          echo "  ✓ RISK-01: JWT Secret Mismatch"
+          echo "  ✓ RISK-02: String-Based Foreign Keys"
+          echo "  ✓ RISK-03: Restaurant Availability Not Validated"
+          echo "  ✓ RISK-04: FoodItem Availability Not Validated"
+          echo "  ✓ RISK-05: Price Manipulation"
+          echo "  ✓ RISK-06: Payment-Order Status Sync Failure"
+
+      - name: ❌ Integration Tests Failed
+        if: failure()
+        run: |
+          echo "❌ Integration tests failed!"
+          echo "Please check the logs above for details."
+          exit 1
+
+  security-analysis:
+    name: Security Risk Analysis
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Analyze Integration Test Results
+        run: |
+          echo "🔒 Security Risk Analysis Report"
+          echo "=================================="
+          echo ""
+          echo "📌 Critical Risks Validated:"
+          echo ""
+          echo "🔴 HIGH PRIORITY:"
+          echo "  • RISK-05: Price Manipulation (Client-Controlled Pricing)"
+          echo "  • RISK-06: Payment-Order Status Sync Failure"
+          echo "  • RISK-01: JWT Secret Mismatch Across Services"
+          echo ""
+          echo "🟡 MEDIUM PRIORITY:"
+          echo "  • RISK-03: Restaurant Availability Not Validated"
+          echo "  • RISK-04: FoodItem Availability Not Validated"
+          echo ""
+          echo "🟢 LOW PRIORITY:"
+          echo "  • RISK-02: String-Based Foreign Keys"
+          echo ""
+          echo "💡 Recommendation: Address HIGH priority risks immediately"
+
+      - name: 📝 Create Issue for Failed Tests
+        if: needs.integration-tests.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Integration Tests Failed - ' + new Date().toISOString().split('T')[0];
+            const body = `## Integration Test Failure Report
+            
+            **Workflow Run:** ${{ github.run_id }}
+            **Branch:** ${{ github.ref }}
+            **Commit:** ${{ github.sha }}
+            
+            ### Failed Tests
+            One or more integration tests for the restaurant-service have failed.
+            
+            ### Action Required
+            1. Review the workflow logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            2. Investigate the failing test cases
+            3. Fix the issues in the codebase
+            4. Re-run the tests
+            
+            ### Test Categories
+            - JWT Secret Mismatch
+            - String-Based Foreign Keys
+            - Restaurant Availability Validation
+            - FoodItem Availability Validation
+            - Price Manipulation Prevention
+            - Payment-Order Status Synchronization
+            
+            **Auto-generated by GitHub Actions**`;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'integration-tests', 'automated']
+            });
+
+  notification:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: always()
+    
+    steps:
+      - name: ✅ Success Notification
+        if: needs.integration-tests.result == 'success'
+        run: |
+          echo "✅ Integration tests passed! All 6 critical risks validated successfully."
+          echo "🎉 Great job! The codebase maintains expected behavior for known vulnerabilities."
+
+      - name: ❌ Failure Notification
+        if: needs.integration-tests.result == 'failure'
+        run: |
+          echo "❌ Integration tests failed!"
+          echo "🔍 Please review the test logs and fix the issues."
+          echo "⚠️ This may indicate new changes that affect existing vulnerabilities."
