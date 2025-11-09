@@ -225,7 +225,7 @@ jobs:
           echo ""
           echo "⚠️ Note: Tests run serially with --runInBand to prevent database race conditions"
           echo ""
-          npm test -- __tests__/integration --runInBand --verbose
+          npm run test:integration -- --verbose
 
       - name: 📊 Generate Test Report
         if: always()
