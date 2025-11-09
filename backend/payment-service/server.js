@@ -8,8 +8,10 @@ const swaggerUi = require("swagger-ui-express");
 const paymentRoutes = require("./routes/paymentRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (skip in test environment - tests manage their own connections)
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 const app = express();
 
