@@ -27,8 +27,5 @@
     "mongodb-memory-server": "^8.16.1",
     "nodemon": "^3.1.9",
     "supertest": "^6.3.4"
-  },
-  "jest": {
-    "testEnvironment": "node"
   }
 }
