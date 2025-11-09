@@ -10,7 +10,7 @@ services:
     container_name: restaurant-service
     restart: unless-stopped
     ports:
-      - "6002:5002"
+      - "5002:5002"
     volumes:
       - ./restaurant-service/uploads:/app/uploads
     environment:
@@ -31,7 +31,6 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017/Order
       - PORT=5005
-      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - mongo
 
@@ -47,7 +46,7 @@ services:
       - MONGO_URI=mongodb://mongo:27017/Auth
       - PORT=4000
       - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=7d
+      - JWT_EXPIRES_IN=1d
     depends_on:
       - mongo
 
@@ -61,7 +60,17 @@ services:
     ports:
       - "6004:5004"
     environment:
-      
+      - MONGO_URI=mongodb://mongo:27017/payment
+      - PORT=5004
+      - NODE_ENV=production
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    depends_on:
+      - mongo
 
   # MongoDB
   mongo: 
