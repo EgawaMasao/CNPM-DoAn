@@ -83,8 +83,8 @@ router.post("/process", async (req, res) => {
     console.log("Stored Payment Record:", payment);
 
     // Send SMS notification
-    // const message = `Your payment of $${orderId} has been processed successfully.`;
-    // await sendSmsNotification(phone, message);
+    const message = `Your payment of $${orderId} has been processed successfully.`;
+    await sendSmsNotification(phone, message);
 
     return res.json({
       clientSecret: paymentIntent.client_secret,
