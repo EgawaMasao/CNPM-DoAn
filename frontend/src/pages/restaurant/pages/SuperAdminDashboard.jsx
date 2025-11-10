@@ -11,7 +11,7 @@ function SuperAdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('superAdminName');
-    window.location.href = '/restaurant/home'; // redirect to login page
+    window.location.href = '/superadmin/login'; // redirect to login page
   };
   
 

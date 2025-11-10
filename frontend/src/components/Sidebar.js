@@ -40,13 +40,13 @@ function Sidebar({ isOpen, onClose, isLoggedIn, onLogout }) {
             </div>
 
             <div className="sidebar-links">
-              <Link to="/orders" onClick={onClose}>Orders</Link>
+              <Link to="/customer/order-history" onClick={onClose}>Orders</Link>
               <Link to="/wallet" onClick={onClose}>Wallet</Link>
               <Link to="/restaurants" onClick={onClose}>Restaurants</Link>
             </div>
 
             <div className="sidebar-actions">
-              <Link to="/add-restaurant" onClick={onClose}>Partner with Us</Link>
+              <Link to="/restaurant/home" onClick={onClose}>Partner with Us</Link>
               <Link to="/signup-delivery" onClick={onClose}>Join as Delivery Partner</Link>
             </div>
 
@@ -72,7 +72,7 @@ function Sidebar({ isOpen, onClose, isLoggedIn, onLogout }) {
                 Signup
               </button>
             </Link>
-            <Link to="/add-restaurant" onClick={onClose}>
+            <Link to="/restaurant/home" onClick={onClose}>
               Partner with Us
             </Link>
             <Link to="/signup-delivery" onClick={onClose}>

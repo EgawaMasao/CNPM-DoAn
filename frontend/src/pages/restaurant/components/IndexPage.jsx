@@ -26,7 +26,7 @@ function IndexPage() {
       <button className={`${styles.button} ${styles['signup-btn']}`} onClick={handleSignUpClick}>
         SignUp
       </button>
-      <button className={`${styles.button} ${styles['homepage-btn']}`}>
+      <button className={`${styles.button} ${styles['homepage-btn']}`} onClick={() => navigate('/')}>
         HomePage
       </button>
 

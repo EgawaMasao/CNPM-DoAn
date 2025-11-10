@@ -16,8 +16,8 @@ export const CartProvider = ({ children }) => {
   };
 
   // Function to remove item from cart
-  const removeFromCart = (foodId) => {
-    setCartItems((prevItems) => prevItems.filter(item => item._id !== foodId));
+  const removeFromCart = (index) => {
+    setCartItems((prevItems) => prevItems.filter((_, i) => i !== index));
   };
 
   // Function to clear cart

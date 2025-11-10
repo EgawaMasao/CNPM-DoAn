@@ -158,7 +158,7 @@ function AddToCartPage() {
               {/* Thin Orange Remove Button */}
               <div
                 title="Remove from cart"
-                onClick={() => removeFromCart(item._id)}
+                onClick={() => removeFromCart(index)}
                 style={{
                   position: "absolute",
                   top: "12px",

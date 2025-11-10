@@ -9,49 +9,55 @@ function CustomerOrderHistory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [restaurantMap, setRestaurantMap] = useState({});
+  const [foodMap, setFoodMap] = useState({});
 
   const navigate = useNavigate();
 
   // Load customer's orders from API
   useEffect(() => {
-    const fetchCustomerOrders = async () => {
+    const fetchAllData = async () => {
       try {
-        // Get token from localStorage
         const token = localStorage.getItem('token');
-        
         if (!token) {
           console.error("No authentication token found. Please login first.");
           navigate('/auth/login');
           return;
         }
-
-        console.log("📦 Fetching customer orders...");
-        
-        const response = await axios.get("http://localhost:5005/api/orders", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // Fetch orders
+        const ordersRes = await axios.get("http://localhost:5005/api/orders", {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        // Fetch all restaurants
+        const restRes = await axios.get("http://localhost:5002/api/restaurant/all");
+        // Fetch all foods
+        const foodRes = await axios.get("http://localhost:5002/api/food-items/all");
 
-        console.log("✅ Orders fetched:", response.data);
-        
+        // Build restaurantId -> name map
+        const restMap = {};
+        (restRes.data.restaurants || []).forEach(r => { restMap[r._id] = r.name; });
+        setRestaurantMap(restMap);
+
+        // Build foodId -> name map
+        const foodMapObj = {};
+        (foodRes.data || []).forEach(f => { foodMapObj[f._id] = f.name; });
+        setFoodMap(foodMapObj);
+
         // Sort orders by date in descending order (newest first)
-        const sortedOrders = response.data.sort((a, b) => {
+        const sortedOrders = ordersRes.data.sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
           const dateB = new Date(b.createdAt || 0);
-          return dateB - dateA; // Descending order
+          return dateB - dateA;
         });
-        
         setOrders(sortedOrders);
         setLoading(false);
       } catch (error) {
-        console.error("❌ Error fetching orders:", error);
+        console.error("❌ Error fetching orders or mapping data:", error);
         setError(error.response?.data?.message || "Failed to load orders. Please try again.");
         setLoading(false);
       }
     };
-
-    fetchCustomerOrders();
+    fetchAllData();
   }, [navigate]);
 
   // Filter orders by search query
@@ -229,7 +235,7 @@ function CustomerOrderHistory() {
               {/* Order Details */}
               <div style={{ marginBottom: "15px" }}>
                 <p style={{ margin: "5px 0", fontSize: "15px" }}>
-                  <strong>Restaurant:</strong> {order.restaurantId}
+                  <strong>Restaurant:</strong> {restaurantMap[order.restaurantId] || order.restaurantId}
                 </p>
                 <p style={{ margin: "5px 0", fontSize: "15px" }}>
                   <strong>Delivery Address:</strong> {order.deliveryAddress}
@@ -250,7 +256,7 @@ function CustomerOrderHistory() {
                 >
                   <thead style={{ backgroundColor: "#e9ecef" }}>
                     <tr>
-                      <th>Food ID</th>
+                      <th>Food</th>
                       <th>Quantity</th>
                       <th>Price</th>
                       <th>Subtotal</th>
@@ -259,7 +265,7 @@ function CustomerOrderHistory() {
                   <tbody>
                     {order.items?.map((item, index) => (
                       <tr key={`${order._id}-item-${index}`}>
-                        <td>{item.foodId}</td>
+                        <td>{foodMap[item.foodId] || item.foodId}</td>
                         <td>{item.quantity}</td>
                         <td>${(item.price / 100).toFixed(2)}</td>
                         <td>${((item.quantity * item.price) / 100).toFixed(2)}</td>
