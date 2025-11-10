@@ -23,7 +23,9 @@ exports.protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // 3) (Optional) Check that the user still exists
-    const user = await Customer.findById(decoded.id);
+    // Handle both old format (just ID) and new format (object with id and role)
+    const userId = typeof decoded === 'string' ? decoded : decoded.id;
+    const user = await Customer.findById(userId);
     if (!user) {
       return res
         .status(401)
@@ -31,8 +33,8 @@ exports.protect = async (req, res, next) => {
     }
 
     // 4) Grant access
-    req.userId = decoded.id;
-    req.userRole = decoded.role;    // e.g. "customer"
+    req.userId = userId;
+    req.userRole = decoded.role || 'customer';    // e.g. "customer"
     next();
   } catch (err) {
     console.error(err);

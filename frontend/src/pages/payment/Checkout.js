@@ -21,9 +21,9 @@ const CheckoutForm = () => {
   const [customerInfo, setCustomerInfo] = useState(null); // Store customer info
   const hasInitialized = useRef(false); // Prevent duplicate API calls
 
-  const API_BASE_URL = "http://localhost:5004";
-  const ORDER_SERVICE_URL = "http://localhost:5005";
-  const AUTH_SERVICE_URL = "http://localhost:5001";
+  const API_BASE_URL = process.env.REACT_APP_PAYMENT_SERVICE_URL || "http://localhost:5004";
+  const ORDER_SERVICE_URL = process.env.REACT_APP_ORDER_SERVICE_URL || "http://localhost:5005";
+  const AUTH_SERVICE_URL = process.env.REACT_APP_AUTH_SERVICE_URL || "http://localhost:5001";
 
   // Get order data from navigation state or localStorage
   const pendingOrderData = location.state?.orderData || JSON.parse(localStorage.getItem('pendingOrder') || '{}');
@@ -212,7 +212,17 @@ const CheckoutForm = () => {
           console.error("Error response:", orderError.response?.data);
           console.error("Error status:", orderError.response?.status);
           console.error("Error message:", orderError.message);
-          setError("⚠️ Payment successful but failed to create order. Please contact support with payment ID: " + paymentIntent.id);
+          console.error("Error code:", orderError.code);
+          console.error("Full error:", JSON.stringify(orderError, Object.getOwnPropertyNames(orderError), 2));
+          
+          // Check if it's a timeout error
+          if (orderError.code === 'ECONNABORTED' || orderError.message.includes('timeout')) {
+            setError("⚠️ Payment successful! Order may have been created. Please check your order history.");
+          } else if (orderError.response?.status === 401) {
+            setError("⚠️ Payment successful but session expired. Please login again and check your order history.");
+          } else {
+            setError("⚠️ Payment successful but failed to create order. Please contact support with payment ID: " + paymentIntent.id);
+          }
         }
       } else {
         setError("❌ Payment failed. Please try again.");

@@ -28,6 +28,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017/Order
       - PORT=5005
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - mongo
 
@@ -73,17 +74,24 @@ services:
     # Giả định cấu trúc Dockerfile nằm ở ./frontend/Dockerfile
     build:
       context: ./frontend
-      dockerfile: Dockerfile 
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_BACKEND_URL: http://localhost:5001
+        REACT_APP_STRIPE_PUBLISHABLE_KEY: ${REACT_APP_STRIPE_PUBLISHABLE_KEY}
+        REACT_APP_ORDER_SERVICE_URL: http://localhost:5005
+        REACT_APP_PAYMENT_SERVICE_URL: http://localhost:5004
+        REACT_APP_AUTH_SERVICE_URL: http://localhost:5001
     container_name: frontend-app
     restart: unless-stopped
     # Ánh xạ ra cổng 3000 của host (hoặc cổng bạn muốn)
     ports:
       - "3000:3000" 
-    env_file:
-      - .env
     environment:
-      REACT_APP_BACKEND_URL: http://auth-service:4000
+      REACT_APP_BACKEND_URL: http://localhost:5001
       REACT_APP_STRIPE_PUBLISHABLE_KEY: ${REACT_APP_STRIPE_PUBLISHABLE_KEY}
+      REACT_APP_ORDER_SERVICE_URL: http://localhost:5005
+      REACT_APP_PAYMENT_SERVICE_URL: http://localhost:5004
+      REACT_APP_AUTH_SERVICE_URL: http://localhost:5001
 
   # MongoDB
   mongo:

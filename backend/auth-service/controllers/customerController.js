@@ -40,8 +40,11 @@ exports.register = async (req, res, next) => {
       location,
     });
 
-    // 4) Sign JWT
-    const token = signToken(newCustomer._id);
+    // 4) Sign JWT with role
+    const token = signToken({
+      id: newCustomer._id,
+      role: 'customer'
+    });
 
     // 5) Respond
     res.status(201).json({
@@ -87,8 +90,11 @@ exports.login = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
-    // 4) Generate token
-    const token = signToken(customer._id);
+    // 4) Generate token with role
+    const token = signToken({
+      id: customer._id,
+      role: 'customer'
+    });
 
     // 5) Respond
     res.json({
