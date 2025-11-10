@@ -4,9 +4,9 @@ const jwt        = require("jsonwebtoken");
 const Customer   = require("../models/Customer");
 
 // Helper to sign a JWT for a given user ID (and role)
-const signToken = (userId) => {
+const signToken = (payload) => {
   return jwt.sign(
-    { id: userId, role: "customer" },
+    payload,
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );

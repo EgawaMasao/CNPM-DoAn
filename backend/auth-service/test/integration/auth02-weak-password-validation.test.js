@@ -77,18 +77,12 @@ describe('RISK-AUTH-02: No Password Strength Validation', () => {
   let app;
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/Auth', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
     await Customer.deleteMany({ email: /^weak_pass_test_/ });
     app = createApp();
   }, 30000);
 
   afterAll(async () => {
     await Customer.deleteMany({ email: /^weak_pass_test_/ });
-    await mongoose.connection.close();
   }, 30000);
 
   describe('Test Case 1: Numeric-Only Passwords (Extremely Weak)', () => {

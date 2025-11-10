@@ -95,11 +95,6 @@ describe('RISK-AUTH-04: No Rate Limiting on Authentication Endpoints', () => {
   let testPassword;
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/Auth', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
     await Customer.deleteMany({ email: /^rate_limit_test_/ });
     app = createApp();
 
@@ -118,7 +113,6 @@ describe('RISK-AUTH-04: No Rate Limiting on Authentication Endpoints', () => {
 
   afterAll(async () => {
     await Customer.deleteMany({ email: /^rate_limit_test_/ });
-    await mongoose.connection.close();
   }, 30000);
 
   describe('Test Case 1: Basic Rate Limiting Check', () => {
@@ -144,7 +138,7 @@ describe('RISK-AUTH-04: No Rate Limiting on Authentication Endpoints', () => {
       // THEN: No requests blocked (vulnerability)
       expect(blockedCount).toBe(0);
       console.log(`✗ VULNERABILITY: ${attemptCount} login attempts processed without rate limiting`);
-    });
+    }, 15000);
   });
 
   describe('Test Case 2: Registration Endpoint', () => {

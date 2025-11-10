@@ -149,11 +149,6 @@ describe('RISK-AUTH-01: JWT Secret Mismatch Between Services', () => {
   const ORDER_SECRET = 'order_service_secret_key_456'; // Different!
   
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/Auth', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
     // Clean test data
     await Customer.deleteMany({ email: /^jwt_test_/ });
 
@@ -163,7 +158,6 @@ describe('RISK-AUTH-01: JWT Secret Mismatch Between Services', () => {
 
   afterAll(async () => {
     await Customer.deleteMany({ email: /^jwt_test_/ });
-    await mongoose.connection.close();
   }, 30000);
 
   describe('Test Case 1: JWT Secret Synchronization Verification', () => {

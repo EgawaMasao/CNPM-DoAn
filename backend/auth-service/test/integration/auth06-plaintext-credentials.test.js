@@ -47,7 +47,6 @@ describe('RISK-AUTH-06: MongoDB Credentials in Plain Text', () => {
 
   afterAll(async () => {
     await Customer.deleteMany({ email: /^creds_test_/ });
-    await mongoose.connection.close();
   }, 30000);
 
   describe('Test Case 1: Credential Extraction from Connection String', () => {
