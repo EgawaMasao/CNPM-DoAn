@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 5005
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["npm", "start"] 

@@ -5,14 +5,11 @@ services:
   # Restaurant-service
   restaurant-service:
     build:
-      context: ./restaurant-service
-      dockerfile: Dockerfile
+      context: ./backend/restaurant-service
     container_name: restaurant-service
     restart: unless-stopped
     ports:
-      - "6002:5002"
-    volumes:
-      - ./restaurant-service/uploads:/app/uploads
+      - "5002:5002"
     environment:
       - MONGO_URI=mongodb://mongo:27017/Restaurant
       - PORT=5002
@@ -23,11 +20,11 @@ services:
   # Order-service
   order-service:
     build:
-      context: ./order-service
+      context: ./backend/order-service
     container_name: order-service
     restart: unless-stopped
     ports:
-      - "6005:5005"
+      - "5005:5005"
     environment:
       - MONGO_URI=mongodb://mongo:27017/Order
       - PORT=5005
@@ -37,14 +34,13 @@ services:
   # Auth-service
   auth-service:
     build:
-      context: ./auth-service
-      dockerfile: Dockerfile
+      context: ./backend/auth-service
     restart: unless-stopped
     ports:
-      - "5000:4000"
+      - "5001:5001"
     environment:
       - MONGO_URI=mongodb://mongo:27017/Auth
-      - PORT=4000
+      - PORT=5001
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=1d
     depends_on:
@@ -53,12 +49,12 @@ services:
   # Payment-service
   payment-service:
     build:
-      context: ./payment-service
+      context: ./backend/payment-service
       dockerfile: Dockerfile
     container_name: payment-service
     restart: unless-stopped
     ports:
-      - "6004:5004"
+      - "5004:5004"
     environment:
       - MONGO_URI=mongodb://mongo:27017/payment
       - PORT=5004
@@ -72,8 +68,26 @@ services:
     depends_on:
       - mongo
 
+
+  frontend:
+    # Giả định cấu trúc Dockerfile nằm ở ./frontend/Dockerfile
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile 
+    container_name: frontend-app
+    restart: unless-stopped
+    # Ánh xạ ra cổng 3000 của host (hoặc cổng bạn muốn)
+    ports:
+      - "3000:3000" 
+    env_file:
+      - .env
+    environment:
+      REACT_APP_BACKEND_URL: http://auth-service:4000
+      REACT_APP_STRIPE_PUBLISHABLE_KEY: ${REACT_APP_STRIPE_PUBLISHABLE_KEY}
+
   # MongoDB
-  mongo: 
+  mongo:
     image: mongo:6.0
     ports:
       - "27017:27017"
+
