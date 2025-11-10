@@ -25,8 +25,16 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t masao1010/cnpm-doan-restaurant-service:latest ./backend/restaurant-service
+          docker build -t masao1010/cnpm-doan-payment-service:latest ./backend/payment-service
+          docker build -t masao1010/cnpm-doan-order-service:latest ./backend/order-service
+          docker build -t masao1010/cnpm-doan-auth-service:latest ./backend/auth-service
+          docker build -t masao1010/cnpm-doan-frontend:latest ./frontend
 
       # B4 - Push Docker image
       - name: Push Docker image
         run: |
           docker push masao1010/cnpm-doan-restaurant-service:latest
+          docker push masao1010/cnpm-doan-payment-service:latest
+          docker push masao1010/cnpm-doan-order-service:latest
+          docker push masao1010/cnpm-doan-auth-service:latest 
+          docker push masao1010/cnpm-doan-frontend:latest
