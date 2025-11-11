@@ -38,3 +38,59 @@ jobs:
           docker push masao1010/cnpm-doan-order-service:latest
           docker push masao1010/cnpm-doan-auth-service:latest 
           docker push masao1010/cnpm-doan-frontend:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted
+
+    steps:
+      # B1 - Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # B2 - Pull images from Docker Hub
+      - name: Pull Docker images
+        run: |
+          docker pull masao1010/cnpm-doan-restaurant-service:latest
+          docker pull masao1010/cnpm-doan-payment-service:latest
+          docker pull masao1010/cnpm-doan-order-service:latest
+          docker pull masao1010/cnpm-doan-auth-service:latest
+          docker pull masao1010/cnpm-doan-frontend:latest
+
+      # B3 - Deploy to Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/mongodb-deployment.yaml
+          kubectl apply -f k8s/auth-service-deployment.yaml
+          kubectl apply -f k8s/order-service-deployment.yaml
+          kubectl apply -f k8s/restaurant-service-deployment.yaml
+          kubectl apply -f k8s/payment-service-deployment.yaml
+          kubectl apply -f k8s/frontend-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+      # B4 - Restart deployments to use new images
+      - name: Restart deployments
+        run: |
+          kubectl rollout restart deployment auth-service -n foodfast
+          kubectl rollout restart deployment order-service -n foodfast
+          kubectl rollout restart deployment restaurant-service -n foodfast
+          kubectl rollout restart deployment payment-service -n foodfast
+          kubectl rollout restart deployment frontend -n foodfast
+
+      # B5 - Wait for rollout to complete
+      - name: Wait for deployments
+        run: |
+          kubectl rollout status deployment/auth-service -n foodfast
+          kubectl rollout status deployment/order-service -n foodfast
+          kubectl rollout status deployment/restaurant-service -n foodfast
+          kubectl rollout status deployment/payment-service -n foodfast
+          kubectl rollout status deployment/frontend -n foodfast
+
+      # B6 - Get deployment status
+      - name: Get deployment status
+        run: |
+          kubectl get pods -n foodfast
+          kubectl get services -n foodfast

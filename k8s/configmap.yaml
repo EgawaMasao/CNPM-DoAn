@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: foodfast
+data:
+  # MongoDB Configuration
+  MONGO_HOST: mongodb-service
+  MONGO_PORT: "27017"
+  
+  # Service Ports
+  AUTH_SERVICE_PORT: "5001"
+  ORDER_SERVICE_PORT: "5005"
+  RESTAURANT_SERVICE_PORT: "5002"
+  PAYMENT_SERVICE_PORT: "5004"
+  FRONTEND_PORT: "3000"
+  
+  # Service URLs (internal)
+  AUTH_SERVICE_URL: "http://auth-service:5001"
+  ORDER_SERVICE_URL: "http://order-service:5005"
+  RESTAURANT_SERVICE_URL: "http://restaurant-service:5002"
+  PAYMENT_SERVICE_URL: "http://payment-service:5004"
+  
+  # Frontend Environment (will be overridden for external access)
+  REACT_APP_AUTH_SERVICE_URL: "http://localhost:5001"
+  REACT_APP_ORDER_SERVICE_URL: "http://localhost:5005"
+  REACT_APP_PAYMENT_SERVICE_URL: "http://localhost:5004"
+  REACT_APP_BACKEND_URL: "http://localhost:5001"
+  
+  # Other
+  NODE_ENV: "production"
+  JWT_EXPIRES_IN: "1d"
