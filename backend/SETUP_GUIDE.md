@@ -25,15 +25,32 @@ docker-compose up -d --build
 
 ### 2️⃣ Import dữ liệu mẫu
 
-#### Import Restaurants và Food Items:
-```bash
-docker exec -it backend-restaurant-service-1 node importData.js
+#### Ghi chú trước khi chạy
+- Tên container có thể khác tùy `docker-compose` project name; luôn kiểm tra bằng `docker ps` trước khi chạy `docker exec`.
+- Thông thường khi khởi bằng `docker-compose` trong repo này container name mặc định là: `restaurant-service`, `auth-service`, `order-service`, `payment-service`, `frontend-app`, `mongo`.
+
+#### Thứ tự recommended để seed/import dữ liệu
+1. Import restaurants & food items (nếu có file JSON):
+```powershell
+docker exec -it restaurant-service node importData.js
 ```
 
-#### Tạo tài khoản người dùng:
-```bash
-docker exec -it backend-auth-service-1 node seedUsers.js
+2. Seed super-admin cho restaurant-service (nếu kịch bản có):
+```powershell
+docker exec -it restaurant-service node seedSuperAdmin.js
 ```
+
+3. Seed thêm dữ liệu nhà hàng (food items, sample data):
+```powershell
+docker exec -it restaurant-service node seedData.js
+```
+
+4. Seed tài khoản auth (Super Admin, Admin, Customer, Restaurant Admin):
+```powershell
+docker exec -it auth-service node seedUsers.js
+```
+
+Ghi chú: nếu `seedData.js` báo lỗi "No restaurant found", chạy `importData.js` trước (bước 1).
 
 ### 3️⃣ Kiểm tra services đang chạy
 
@@ -43,11 +60,11 @@ docker ps
 
 ### 4️⃣ Xem logs (nếu cần)
 
-```bash
-docker logs backend-restaurant-service-1
-docker logs backend-order-service-1
-docker logs backend-payment-service-1
-docker logs backend-auth-service-1
+```powershell
+docker logs restaurant-service
+docker logs order-service
+docker logs payment-service
+docker logs auth-service
 ```
 
 ---
@@ -183,23 +200,23 @@ docker-compose restart restaurant-service
 ## 📊 Kiểm tra dữ liệu trong MongoDB
 
 ### Xem tất cả databases:
-```bash
-docker exec -it backend-mongo-1 mongosh --eval "show dbs"
+```powershell
+docker exec -it mongo mongosh --eval "show dbs"
 ```
 
 ### Đếm số lượng restaurants:
-```bash
-docker exec -it backend-mongo-1 mongosh --eval "use restaurant" --eval "db.restaurants.countDocuments()"
+```powershell
+docker exec -it mongo mongosh --eval "use restaurant; print(db.restaurants.countDocuments())"
 ```
 
 ### Xem danh sách admins:
-```bash
-docker exec -it backend-mongo-1 mongosh --eval "use Auth" --eval "db.admins.find({}, {password: 0}).pretty()"
+```powershell
+docker exec -it mongo mongosh --eval "use Auth; db.admins.find({}, {password: 0}).pretty()"
 ```
 
 ### Xem danh sách customers:
-```bash
-docker exec -it backend-mongo-1 mongosh --eval "use Auth" --eval "db.customers.find({}, {password: 0}).pretty()"
+```powershell
+docker exec -it mongo mongosh --eval "use Auth; db.customers.find({}, {password: 0}).pretty()"
 ```
 
 ---
@@ -240,7 +257,7 @@ docker exec -it backend-mongo-1 mongosh --eval "use Auth" --eval "db.customers.f
 ┌──────────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐
 │ Restaurant   │ │  Order   │ │ Payment  │ │   Auth   │ │   MongoDB    │
 │  Service     │ │ Service  │ │ Service  │ │ Service  │ │              │
-│ Port: 5002   │ │Port: 5005│ │Port: 5004│ │Port: 4000│ │ Port: 27018  │
+│ Port: 5002   │ │Port: 5005│ │Port: 5004│ │Port: 5001│ │ Port: 27018  │
 └──────┬───────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────────────┘
        │              │             │             │
        └──────────────┴─────────────┴─────────────┘
