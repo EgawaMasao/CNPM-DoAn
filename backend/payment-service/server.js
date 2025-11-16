@@ -16,7 +16,24 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express();
 
 // Enable CORS for your frontend
-app.use(cors({ origin: "http://localhost:3000" }));
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://frontend:3000",
+  "http://frontend-app:3000",
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({ 
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true 
+}));
 
 // IMPORTANT: Mount the webhook route with raw body parsing BEFORE JSON parser middleware.
 app.use("/api/payment/webhook", express.raw({ type: "application/json" }), webhookRoutes);

@@ -13,13 +13,33 @@ connectDB();
 const app = express();
 
 const server = http.createServer(app);
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://frontend:3000",
+  "http://frontend-app:3000",
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 const io = new Server(server, {
     cors: {
-        origin: "*", // Allow frontend connections
-        methods: ["GET", "POST"]
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
-app.use(cors());
+
+app.use(cors({ 
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true 
+}));
 app.use(express.json());
 
 // Routes

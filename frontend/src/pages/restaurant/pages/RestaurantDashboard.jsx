@@ -20,7 +20,7 @@ function RestaurantDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/restaurant/homes';
+    window.location.href = '/restaurant/home';
   };
 
   const handleUnauthorizedError = () => {
