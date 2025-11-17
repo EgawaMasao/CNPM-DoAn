@@ -19,7 +19,7 @@ export default function AuthLogin() {
     e.preventDefault();
     setError("");
     try {
-      const res = await axios.post("http://localhost:5001/api/auth/login", credentials);
+      const res = await axios.post("/api/auth/login", credentials);
       localStorage.setItem("token", res.data.token);
       navigate("/customer/profile");
     } catch (err) {

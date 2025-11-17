@@ -142,7 +142,7 @@ function OrderForm({ addOrder }) {
     const newOrder = { ...order, totalPrice };
 
     try {
-      await axios.post("http://localhost:5005/api/orders", newOrder, {
+      await axios.post("/api/orders", newOrder, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

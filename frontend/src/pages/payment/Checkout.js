@@ -21,9 +21,9 @@ const CheckoutForm = () => {
   const [customerInfo, setCustomerInfo] = useState(null); // Store customer info
   const hasInitialized = useRef(false); // Prevent duplicate API calls
 
-  const API_BASE_URL = process.env.REACT_APP_PAYMENT_SERVICE_URL || "http://localhost:5004";
-  const ORDER_SERVICE_URL = process.env.REACT_APP_ORDER_SERVICE_URL || "http://localhost:5005";
-  const AUTH_SERVICE_URL = process.env.REACT_APP_AUTH_SERVICE_URL || "http://localhost:5001";
+  const API_BASE_URL = process.env.REACT_APP_PAYMENT_SERVICE_URL || "";
+  const ORDER_SERVICE_URL = process.env.REACT_APP_ORDER_SERVICE_URL || "";
+  const AUTH_SERVICE_URL = process.env.REACT_APP_AUTH_SERVICE_URL || "";
 
   // Get order data from navigation state or localStorage
   const pendingOrderData = location.state?.orderData || JSON.parse(localStorage.getItem('pendingOrder') || '{}');

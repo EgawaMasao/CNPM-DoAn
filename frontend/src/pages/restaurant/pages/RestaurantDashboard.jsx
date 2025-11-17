@@ -32,7 +32,7 @@ function RestaurantDashboard() {
   const fetchRestaurantProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/profile', {
+      const res = await fetch('/api/restaurant/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) {
@@ -54,7 +54,7 @@ function RestaurantDashboard() {
   const fetchFoodItems = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/food-items/', {
+      const res = await fetch('/api/food-items/', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -84,7 +84,7 @@ function RestaurantDashboard() {
       formData.append('category', newFoodItem.category);
       formData.append('image', newFoodItem.imageFile);
 
-      const res = await fetch('http://localhost:5002/api/food-items/create', {
+      const res = await fetch('/api/food-items/create', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -112,7 +112,7 @@ function RestaurantDashboard() {
   
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5002/api/food-items/${id}`, {
+      const res = await fetch(`/api/food-items/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -144,7 +144,7 @@ function RestaurantDashboard() {
       if (editFoodItem.imageFile) {
         formData.append('image', editFoodItem.imageFile);
           } 
-      const res = await fetch(`http://localhost:5002/api/food-items/${editFoodItem._id}`, {
+      const res = await fetch(`/api/food-items/${editFoodItem._id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -191,7 +191,7 @@ function RestaurantDashboard() {
         formData.append('profilePicture', updatedProfile.profilePictureFile);
       }
   
-      const res = await fetch('http://localhost:5002/api/restaurant/update', {
+      const res = await fetch('/api/restaurant/update', {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -214,7 +214,7 @@ function RestaurantDashboard() {
   const toggleAvailability = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/restaurant/availability', {
+      const res = await fetch('/api/restaurant/availability', {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -294,7 +294,7 @@ function RestaurantDashboard() {
   <>
     {restaurant.profilePicture && (
       <img
-        src={`http://localhost:5002${restaurant.profilePicture}`}
+        src={`${restaurant.profilePicture}`}
         alt="Restaurant"
         style={{
           width: '150px',
@@ -345,7 +345,7 @@ function RestaurantDashboard() {
                     <tr key={item._id}>
                       <td>
                         <img
-                         src={`http://localhost:5002${item.image}`} 
+                         src={`${item.image}`} 
                           alt={item.name}
                           style={{
                             width: '50px',

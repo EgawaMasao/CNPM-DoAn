@@ -15,6 +15,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://frontend:3000",
   "http://frontend-app:3000",
+  "http://food-delivery.local",
   process.env.FRONTEND_URL
 ].filter(Boolean);
 

@@ -17,7 +17,7 @@ function CustomerHome() {
     const fetchRestaurants = async () => {
       try {
         // Use the public endpoint that doesn't require authentication
-        const res = await fetch('http://localhost:5002/api/restaurant/all');
+        const res = await fetch('/api/restaurant/all');
 
         const data = await res.json();
         if (res.ok) {
@@ -119,7 +119,7 @@ function CustomerHome() {
               <img
                 src={
                   rest.profilePicture 
-                    ? `http://localhost:5002${rest.profilePicture}`
+                    ? `${rest.profilePicture}`
                     : "https://via.placeholder.com/300x200?text=Restaurant+Image"
                 }
                 alt={rest.name}

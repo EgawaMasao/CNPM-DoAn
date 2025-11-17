@@ -33,7 +33,7 @@ function SuperAdminDashboard() {
     const fetchRestaurants = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5002/api/superadmin/restaurants', {
+        const res = await fetch('/api/superadmin/restaurants', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -81,7 +81,7 @@ function SuperAdminDashboard() {
   const handleSaveEdit = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5002/api/superadmin/restaurant/${editing}`, {
+      const res = await fetch(`/api/superadmin/restaurant/${editing}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -115,7 +115,7 @@ function SuperAdminDashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5002/api/superadmin/restaurant/${id}`, {
+      const res = await fetch(`/api/superadmin/restaurant/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

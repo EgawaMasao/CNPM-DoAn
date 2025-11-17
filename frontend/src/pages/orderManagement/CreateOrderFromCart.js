@@ -63,11 +63,11 @@ function CreateOrderFromCart() {
         
         // Try the correct authenticated endpoint first, then fallbacks
         const possibleEndpoints = [
-          `http://localhost:5001/api/auth/customer/profile`, // Correct authenticated endpoint
-          `http://localhost:5001/api/auth/customer/${customerId}`,
-          `http://localhost:5001/api/customers/${customerId}`,
-          `http://localhost:5001/api/auth/customers/${customerId}`,
-          `http://localhost:5001/api/users/${customerId}`
+          `/api/auth/customer/profile`, // Correct authenticated endpoint
+          `/api/auth/customer/${customerId}`,
+          `/api/customers/${customerId}`,
+          `/api/auth/customers/${customerId}`,
+          `/api/users/${customerId}`
         ];
 
         let customerData = null;
@@ -167,7 +167,7 @@ function CreateOrderFromCart() {
       
       if (restaurantId) {
         try {
-          const response = await axios.get('http://localhost:5002/api/restaurant/all');
+          const response = await axios.get('/api/restaurant/all');
           console.log("Restaurant response:", response.data);
           const restaurant = response.data.restaurants?.find(r => r._id === restaurantId);
           console.log("Found restaurant:", restaurant);
@@ -364,7 +364,7 @@ function CreateOrderFromCart() {
                   <img
                     src={
                       item.image 
-                        ? `http://localhost:5002${item.image}`
+                        ? `${item.image}`
                         : "https://placehold.co/60x60?text=Food"
                     }
                     alt={item.name}

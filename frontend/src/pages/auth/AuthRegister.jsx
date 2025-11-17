@@ -23,7 +23,7 @@ export default function AuthRegister() {
     e.preventDefault();
     setError("");
     try {
-      const res = await axios.post("http://localhost:5001/api/auth/register/customer", form);
+      const res = await axios.post("/api/auth/register/customer", form);
       localStorage.setItem("token", res.data.token);
       navigate("/customer/profile");
     } catch (err) {

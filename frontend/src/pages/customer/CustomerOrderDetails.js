@@ -26,7 +26,7 @@ function CustomerOrderDetails() {
 
         console.log("📦 Fetching order details for ID:", id);
 
-        const response = await axios.get(`http://localhost:5005/api/orders/${id}`, {
+        const response = await axios.get(`/api/orders/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

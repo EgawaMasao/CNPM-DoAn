@@ -20,7 +20,7 @@ function FoodItemList() {
     const fetchRestaurantFoods = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5002/api/food-items/restaurant/${restaurantId}`
+          `/api/food-items/restaurant/${restaurantId}`
         );
         setFoods(res.data);
       } catch (err) {
@@ -32,7 +32,7 @@ function FoodItemList() {
     const fetchRestaurantDetails = async () => {
       try {
         // First try to get restaurant details from the public restaurants endpoint
-        const res = await axios.get('http://localhost:5002/api/restaurant/all');
+        const res = await axios.get('/api/restaurant/all');
         const restaurant = res.data.restaurants?.find(r => r._id === restaurantId);
         if (restaurant) {
           setRestaurantName(restaurant.name);
@@ -168,7 +168,7 @@ function FoodItemList() {
               <img
                 src={
                   food.image 
-                    ? `http://localhost:5002${food.image}`
+                    ? `${food.image}`
                     : "https://placehold.co/300x180?text=Food+Image"
                 }
                 alt={food.name}

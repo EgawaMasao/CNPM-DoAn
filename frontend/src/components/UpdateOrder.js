@@ -23,7 +23,7 @@ function UpdateOrder({ addOrder }) {
   useEffect(() => {
     if (id) {
       axios
-        .get(`http://localhost:5005/api/orders/${id}`, {
+        .get(`/api/orders/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -104,7 +104,7 @@ function UpdateOrder({ addOrder }) {
     const updatedOrder = { ...order, totalPrice };
 
     axios
-      .patch(`http://localhost:5005/api/orders/${id}`, updatedOrder, {
+      .patch(`/api/orders/${id}`, updatedOrder, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

@@ -12,7 +12,7 @@ function DeleteOrder() {
 
   useEffect(() => {
     if (id) {
-      axios.get(`http://localhost:5005/api/orders/${id}`, {
+      axios.get(`/api/orders/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -31,7 +31,7 @@ function DeleteOrder() {
   }, [id]);
 
   const handleDelete = () => {
-    axios.delete(`http://localhost:5005/api/orders/${id}`, {
+    axios.delete(`/api/orders/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

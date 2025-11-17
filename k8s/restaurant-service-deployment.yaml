@@ -6,7 +6,7 @@ metadata:
   labels:
     app: restaurant-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: restaurant-service
@@ -18,7 +18,7 @@ spec:
       containers:
       - name: restaurant-service
         image: restaurant-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         ports:
         - containerPort: 5002
           name: http

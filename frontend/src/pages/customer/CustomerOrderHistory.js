@@ -25,13 +25,13 @@ function CustomerOrderHistory() {
           return;
         }
         // Fetch orders
-        const ordersRes = await axios.get("http://localhost:5005/api/orders", {
+        const ordersRes = await axios.get("/api/orders", {
           headers: { Authorization: `Bearer ${token}` },
         });
         // Fetch all restaurants
-        const restRes = await axios.get("http://localhost:5002/api/restaurant/all");
+        const restRes = await axios.get("/api/restaurant/all");
         // Fetch all foods
-        const foodRes = await axios.get("http://localhost:5002/api/food-items/all");
+        const foodRes = await axios.get("/api/food-items/all");
 
         // Build restaurantId -> name map
         const restMap = {};

@@ -11,7 +11,7 @@ export default function CustomerProfile() {
     (async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5001/api/auth/customer/profile", {
+        const res = await axios.get("/api/auth/customer/profile", {
           headers: { Authorization: `Bearer ${token}` }
         });
         setProfile(res.data.data.customer);

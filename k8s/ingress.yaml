@@ -4,22 +4,14 @@ metadata:
   name: food-delivery-ingress
   namespace: foodfast
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 spec:
   ingressClassName: nginx
   rules:
   - host: food-delivery.local
     http:
       paths:
-      # Frontend
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              number: 3000
       # Auth Service
       - path: /api/auth
         pathType: Prefix
@@ -36,19 +28,58 @@ spec:
             name: order-service
             port:
               number: 5005
-      # Restaurant Service
-      - path: /api/restaurants
-        pathType: Prefix
-        backend:
-          service:
-            name: restaurant-service
-            port:
-              number: 5002
       # Payment Service
-      - path: /api/payments
+      - path: /api/payment
         pathType: Prefix
         backend:
           service:
             name: payment-service
             port:
               number: 5004
+      # Restaurant Service
+      - path: /api/restaurant
+        pathType: Prefix
+        backend:
+          service:
+            name: restaurant-service
+            port:
+              number: 5002
+      # SuperAdmin
+      - path: /api/superadmin
+        pathType: Prefix
+        backend:
+          service:
+            name: restaurant-service
+            port:
+              number: 5002
+      - path: /api/superAdmin
+        pathType: Prefix
+        backend:
+          service:
+            name: restaurant-service
+            port:
+              number: 5002
+      # Food Items (also restaurant service)
+      - path: /api/food-items
+        pathType: Prefix
+        backend:
+          service:
+            name: restaurant-service
+            port:
+              number: 5002
+      # Uploads (static files from restaurant service)
+      - path: /uploads
+        pathType: Prefix
+        backend:
+          service:
+            name: restaurant-service
+            port:
+              number: 5002
+      # Frontend (MUST BE LAST - catches all other paths)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000

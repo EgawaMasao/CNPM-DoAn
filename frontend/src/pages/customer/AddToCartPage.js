@@ -108,7 +108,7 @@ function AddToCartPage() {
               <img
                 src={
                   item.image 
-                    ? `http://localhost:5002${item.image}`
+                    ? `${item.image}`
                     : "https://placehold.co/300x200?text=Food+Image"
                 }
                 alt={item.name}

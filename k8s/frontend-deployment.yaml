@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: frontend:latest
-        imagePullPolicy: IfNotPresent
+        image: frontend:v8
+        imagePullPolicy: Never
         ports:
         - containerPort: 3000
           name: http

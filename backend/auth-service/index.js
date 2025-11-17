@@ -12,6 +12,7 @@ const allowedOrigins = [
   "http://localhost:3000",           // Browser gọi khi dev local
   "http://frontend:3000",            // Container gọi trong Docker
   "http://frontend-app:3000",        // Container name backup
+  "http://food-delivery.local",      // Ingress domain
   process.env.FRONTEND_URL
 ].filter(Boolean);
 

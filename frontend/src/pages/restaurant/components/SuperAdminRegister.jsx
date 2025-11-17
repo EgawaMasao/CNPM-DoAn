@@ -47,7 +47,7 @@ function SuperAdminRegister() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:5002/api/superAdmin/register', {
+      const res = await fetch('/api/superAdmin/register', {
 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
