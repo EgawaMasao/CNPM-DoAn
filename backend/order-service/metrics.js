@@ -1,4 +1,4 @@
-const client = require('prom-client');
+import client from 'prom-client';
 
 // Create a Registry
 const register = new client.Registry();
