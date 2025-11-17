@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: frontend:v8
-        imagePullPolicy: Never
+        image: masao1010/cnpm-doan-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 3000
           name: http

@@ -28,7 +28,9 @@ jobs:
           docker build -t masao1010/cnpm-doan-payment-service:latest ./backend/payment-service
           docker build -t masao1010/cnpm-doan-order-service:latest ./backend/order-service
           docker build -t masao1010/cnpm-doan-auth-service:latest ./backend/auth-service
-          docker build -t masao1010/cnpm-doan-frontend:latest ./frontend
+          docker build \
+            --build-arg REACT_APP_STRIPE_PUBLISHABLE_KEY="${{ secrets.REACT_APP_STRIPE_PUBLISHABLE_KEY }}" \
+            -t masao1010/cnpm-doan-frontend:latest ./frontend
 
       # B4 - Push Docker image
       - name: Push Docker image

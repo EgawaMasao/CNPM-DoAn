@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: payment-service
-        image: payment-service:latest
-        imagePullPolicy: Never
+        image: masao1010/cnpm-doan-payment-service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5004
           name: http

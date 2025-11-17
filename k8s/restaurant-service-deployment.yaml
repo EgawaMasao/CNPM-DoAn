@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: restaurant-service
-        image: restaurant-service:latest
-        imagePullPolicy: Never
+        image: masao1010/cnpm-doan-restaurant-service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5002
           name: http

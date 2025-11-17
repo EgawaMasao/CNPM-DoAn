@@ -1,5 +1,2 @@
 # Environment variables
 .env
-
-# Kubernetes secrets (contains sensitive data)
-k8s/secret.yaml

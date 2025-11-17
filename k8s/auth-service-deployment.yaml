@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: auth-service
-        image: auth-service:latest
-        imagePullPolicy: Never
+        image: masao1010/cnpm-doan-auth-service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5001
           name: http
