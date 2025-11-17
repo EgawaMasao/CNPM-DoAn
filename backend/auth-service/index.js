@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');  
 const connectDB = require('./config/db');
+const { register, metricsMiddleware } = require('./metrics');
 
 const authRoutes = require('./routes/authRoutes');
 
@@ -32,9 +33,18 @@ app.use(cors({
 
 app.use(express.json());
 
+// Metrics middleware
+app.use(metricsMiddleware);
+
 // Connect DB then start
 connectDB().then(() => {
   app.use('/api/auth', authRoutes);
+
+  // Metrics endpoint
+  app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  });
 
   app.get("/", (req, res) => {
     res.send("Auth Service is running 🚀");
