@@ -40,7 +40,7 @@ register.registerMetric(activeConnections);
 // Middleware to track requests
 const metricsMiddleware = (req, res, next) => {
   const start = Date.now();
-  const serviceName = 'auth-service';
+  const serviceName = 'order-service';
   
   activeConnections.inc({ service: serviceName });
 
@@ -76,4 +76,4 @@ const metricsMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = { register, metricsMiddleware };
+export { register, metricsMiddleware };

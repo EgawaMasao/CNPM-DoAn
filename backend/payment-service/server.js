@@ -4,6 +4,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const { register, metricsMiddleware } = require("./metrics");
 
 const paymentRoutes = require("./routes/paymentRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
@@ -42,6 +43,13 @@ app.use("/api/payment/webhook", express.raw({ type: "application/json" }), webho
 // JSON parser for all other routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(metricsMiddleware);
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 
 // Swagger Configuration (optional)
 const swaggerOptions = {

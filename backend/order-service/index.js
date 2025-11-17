@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 import cors from "cors";
 import orderRoutes from "./routes/orderRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import { register, metricsMiddleware } from "./metrics.js";
 
 dotenv.config();
 connectDB();
@@ -42,6 +43,13 @@ app.use(cors({
   credentials: true 
 }));
 app.use(express.json());
+app.use(metricsMiddleware);
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 
 // Routes
 app.use("/api/orders", orderRoutes);

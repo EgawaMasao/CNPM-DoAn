@@ -8,6 +8,7 @@ import restaurantRoutes from './routes/restaurantRoutes.js';
 import superAdminRoutes from './routes/superAdminRoutes.js';
 import foodItemRoutes from './routes/foodItemRoutes.js';
 import cors from 'cors';
+import { register, metricsMiddleware } from '../metrics.js';
 
 const app = express();
 
@@ -33,6 +34,13 @@ app.use(cors({
 
 // Middleware to parse JSON data
 app.use(express.json());
+app.use(metricsMiddleware);
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
 
 // Routes
 app.use('/api/restaurant', restaurantRoutes);
