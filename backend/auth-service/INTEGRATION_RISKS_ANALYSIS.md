@@ -8,6 +8,7 @@ Auth Flow: Register/Login → JWT Sign (utils/jwt.js:3-7) → Token Response →
 ```
 
 ---
+nmdmdmd
 
 ## 🔒 EXACTLY 10 INTEGRATION RISKS
 
