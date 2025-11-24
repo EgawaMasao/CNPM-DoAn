@@ -5,12 +5,16 @@ const Payment = require("../../models/PaymentModel");
 
 // Mock Stripe
 jest.mock("stripe", () => {
+  let counter = 0;
   return jest.fn(() => ({
     paymentIntents: {
-      create: jest.fn().mockResolvedValue({
-        id: "pi_logging_test",
-        client_secret: "pi_logging_test_secret_SENSITIVE_DATA_IN_LOGS",
-        status: "requires_payment_method",
+      create: jest.fn().mockImplementation(() => {
+        counter++;
+        return Promise.resolve({
+          id: `pi_logging_test_${counter}`,
+          client_secret: `pi_logging_test_${counter}_secret_SENSITIVE_DATA_IN_LOGS`,
+          status: "requires_payment_method",
+        });
       }),
       retrieve: jest.fn().mockResolvedValue({
         id: "pi_logging_test",
@@ -276,9 +280,9 @@ describe("RISK-PAYMENT-09: Sensitive Data Logging Integration Tests", () => {
 
     it("should verify multiple payment requests create multiple log entries (RISK-PAYMENT-09)", async () => {
       const payments = [
-        { orderId: "RISK09-ORD-009", userId: "u1", amount: "10.00", email: "a@x.com", phone: "+15557777777" },
-        { orderId: "RISK09-ORD-010", userId: "u2", amount: "20.00", email: "b@x.com", phone: "+15558888888" },
-        { orderId: "RISK09-ORD-011", userId: "u3", amount: "30.00", email: "c@x.com", phone: "+15559999999" },
+        { orderId: `RISK09-ORD-009-${Date.now()}-${Math.random()}`, userId: "u1", amount: "10.00", email: "a@x.com", phone: "+15557777777" },
+        { orderId: `RISK09-ORD-010-${Date.now()}-${Math.random()}`, userId: "u2", amount: "20.00", email: "b@x.com", phone: "+15558888888" },
+        { orderId: `RISK09-ORD-011-${Date.now()}-${Math.random()}`, userId: "u3", amount: "30.00", email: "c@x.com", phone: "+15559999999" },
       ];
 
       for (const payment of payments) {

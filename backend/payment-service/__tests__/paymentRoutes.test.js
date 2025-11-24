@@ -389,7 +389,7 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
     // Test 4: POST /process - Reuse valid existing payment intent (Happy Path)
     // ============================================================================
     describe('Test 4: POST /process - Reuse Valid Existing Payment Intent (Happy Path)', () => {
-        it('should reuse existing valid payment intent when status is requires_payment_method', async () => {
+        it('should create new payment intent when existing payment is pending', async () => {
             // GIVEN: Existing pending payment with valid payment intent
             const paymentData = {
                 orderId: 'ORDER-REUSE-INTENT',
@@ -418,36 +418,51 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
             };
             mockPaymentIntents.retrieve.mockResolvedValue(mockExistingIntent);
 
+            // Mock cancel old intent
+            mockPaymentIntents.cancel.mockResolvedValue({ id: 'pi_existing_valid' });
+
+            // Mock deleteOne
+            Payment.deleteOne.mockResolvedValue({ deletedCount: 1 });
+
+            // Mock new intent creation
+            const newIntent = {
+                id: 'pi_new_123',
+                client_secret: 'pi_new_123_secret'
+            };
+            mockPaymentIntents.create.mockResolvedValue(newIntent);
+
+            const mockNewPayment = {
+                _id: 'new_payment_id',
+                save: jest.fn().mockResolvedValue(this)
+            };
+            Payment.mockImplementation(() => mockNewPayment);
+
             // WHEN: Attempting to process payment with existing valid intent
             const response = await request(app)
                 .post('/api/payment/process')
                 .send(paymentData);
 
-            // THEN: Should return existing clientSecret without creating new intent
+            // THEN: Should cancel old intent, delete old payment, create new intent
             expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('clientSecret', 'pi_existing_valid_secret');
-            expect(response.body).toHaveProperty('paymentId', 'existing_pending_id');
+            expect(response.body).toHaveProperty('clientSecret', 'pi_new_123_secret');
+            expect(response.body).toHaveProperty('paymentId', 'new_payment_id');
             expect(response.body).toHaveProperty('disablePayment', false);
 
-            // Verify existing intent was retrieved
-            expect(mockPaymentIntents.retrieve).toHaveBeenCalledWith('pi_existing_valid');
+            // Verify old intent was retrieved and cancelled
+            expect(mockPaymentIntents.cancel).toHaveBeenCalledWith('pi_existing_valid');
+            expect(Payment.deleteOne).toHaveBeenCalledWith({ orderId: 'ORDER-REUSE-INTENT' });
 
-            // Verify no new payment intent was created
-            expect(mockPaymentIntents.create).not.toHaveBeenCalled();
-
-            // Verify no payment was saved
-            expect(Payment).not.toHaveBeenCalled();
-
-            // Verify no SMS was sent (intent reused)
-            expect(sendSmsNotification).not.toHaveBeenCalled();
+            // Verify new intent was created
+            expect(mockPaymentIntents.create).toHaveBeenCalled();
         });
 
-        it('should avoid duplicate intents by reusing valid ones', async () => {
+        it('should create new intent when existing payment is pending', async () => {
             // GIVEN: Existing payment with requires_payment_method status
             const paymentData = {
                 orderId: 'ORDER-AVOID-DUPLICATE',
                 userId: 'USER-AVOID-DUP',
                 amount: 100.00,
+                currency: 'usd',
                 email: 'avoiddup@example.com',
                 phone: '+4444444444'
             };
@@ -467,15 +482,31 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
                 status: 'requires_payment_method'
             });
 
+            // Mock cancel and create new
+            mockPaymentIntents.cancel.mockResolvedValue({ id: 'pi_reusable' });
+            Payment.deleteOne.mockResolvedValue({ deletedCount: 1 });
+
+            const newIntent = {
+                id: 'pi_new_avoid',
+                client_secret: 'pi_new_avoid_secret'
+            };
+            mockPaymentIntents.create.mockResolvedValue(newIntent);
+
+            const mockNewPayment = {
+                _id: 'new_payment_avoid',
+                save: jest.fn().mockResolvedValue(this)
+            };
+            Payment.mockImplementation(() => mockNewPayment);
+
             // WHEN: Processing payment
             const response = await request(app)
                 .post('/api/payment/process')
                 .send(paymentData);
 
-            // THEN: Should reuse intent and not create new one
+            // THEN: Should create new intent
             expect(response.status).toBe(200);
-            expect(mockPaymentIntents.create).not.toHaveBeenCalled();
-            expect(mockPaymentIntents.retrieve).toHaveBeenCalledWith('pi_reusable');
+            expect(mockPaymentIntents.cancel).toHaveBeenCalledWith('pi_reusable');
+            expect(mockPaymentIntents.create).toHaveBeenCalled();
         });
 
         it('should create new intent if existing one is not requires_payment_method', async () => {
@@ -655,7 +686,7 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
     // Test 6: POST /process - Duplicate key error handling (Error Path)
     // ============================================================================
     describe('Test 6: POST /process - Duplicate Key Error (Code 11000) Handling (Error Path)', () => {
-        it('should handle duplicate key error when concurrent requests create same orderId', async () => {
+        it('should return 409 when duplicate key error occurs', async () => {
             // GIVEN: Concurrent requests causing duplicate key error
             const paymentData = {
                 orderId: 'ORDER-DUPLICATE-KEY',
@@ -684,31 +715,18 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
             };
             Payment.mockImplementation(() => mockPayment);
 
-            // Mock findOne again to return existing paid payment
-            const existingPaidPayment = {
-                orderId: 'ORDER-DUPLICATE-KEY',
-                status: 'Paid',
-                stripePaymentIntentId: 'pi_existing',
-                stripeClientSecret: 'pi_existing_secret'
-            };
-            Payment.findOne.mockResolvedValueOnce(existingPaidPayment);
-
             // WHEN: Processing payment with duplicate key error
             const response = await request(app)
                 .post('/api/payment/process')
                 .send(paymentData);
 
-            // THEN: Should return 200 with paid status
-            expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('message', '✅ This order has already been paid successfully.');
-            expect(response.body).toHaveProperty('paymentStatus', 'Paid');
-            expect(response.body).toHaveProperty('disablePayment', true);
-
-            // Verify findOne was called twice (initial check + recovery)
-            expect(Payment.findOne).toHaveBeenCalledTimes(2);
+            // THEN: Should return 409 with conflict message
+            expect(response.status).toBe(409);
+            expect(response.body).toHaveProperty('error', 'Payment creation conflict. Please try again.');
+            expect(response.body).toHaveProperty('shouldRetry', true);
         });
 
-        it('should return existing valid intent when duplicate error for pending payment', async () => {
+        it('should return 409 when duplicate error for pending payment', async () => {
             // GIVEN: Duplicate error but existing payment is pending with valid intent
             const paymentData = {
                 orderId: 'ORDER-DUP-PENDING',
@@ -733,32 +751,15 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
             };
             Payment.mockImplementation(() => mockPayment);
 
-            // Mock findOne to return pending payment
-            const existingPendingPayment = {
-                _id: 'existing_pending_id',
-                orderId: 'ORDER-DUP-PENDING',
-                status: 'Pending',
-                stripePaymentIntentId: 'pi_existing_pending',
-                stripeClientSecret: 'pi_existing_pending_secret'
-            };
-            Payment.findOne.mockResolvedValueOnce(existingPendingPayment);
-
-            // Mock retrieve to return valid intent
-            mockPaymentIntents.retrieve.mockResolvedValue({
-                id: 'pi_existing_pending',
-                status: 'requires_payment_method'
-            });
-
             // WHEN: Processing payment with duplicate error for pending
             const response = await request(app)
                 .post('/api/payment/process')
                 .send(paymentData);
 
-            // THEN: Should return existing client secret
-            expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('clientSecret', 'pi_existing_pending_secret');
-            expect(response.body).toHaveProperty('paymentId', 'existing_pending_id');
-            expect(response.body).toHaveProperty('disablePayment', false);
+            // THEN: Should return 409
+            expect(response.status).toBe(409);
+            expect(response.body).toHaveProperty('error', 'Payment creation conflict. Please try again.');
+            expect(response.body).toHaveProperty('shouldRetry', true);
         });
 
         it('should return 409 when duplicate error and existing intent is invalid', async () => {
@@ -786,17 +787,6 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
             };
             Payment.mockImplementation(() => mockPayment);
 
-            const existingPayment = {
-                orderId: 'ORDER-DUP-EXPIRED',
-                status: 'Pending',
-                stripePaymentIntentId: 'pi_expired',
-                stripeClientSecret: 'pi_expired_secret'
-            };
-            Payment.findOne.mockResolvedValueOnce(existingPayment);
-
-            // Mock retrieve to throw error (expired)
-            mockPaymentIntents.retrieve.mockRejectedValue(new Error('Intent expired'));
-
             // WHEN: Processing with expired intent
             const response = await request(app)
                 .post('/api/payment/process')
@@ -804,11 +794,11 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
 
             // THEN: Should return 409 with retry message
             expect(response.status).toBe(409);
-            expect(response.body).toHaveProperty('error', 'Payment intent expired. Please refresh the page and try again.');
+            expect(response.body).toHaveProperty('error', 'Payment creation conflict. Please try again.');
             expect(response.body).toHaveProperty('shouldRetry', true);
         });
 
-        it('should return 500 when duplicate error but no payment record found', async () => {
+        it('should return 409 when duplicate error but no payment record found', async () => {
             // GIVEN: Duplicate error but findOne returns null
             const paymentData = {
                 orderId: 'ORDER-DUP-NO-RECORD',
@@ -833,17 +823,15 @@ describe('PaymentRoutes Unit Tests - Shopee QA Standards', () => {
             };
             Payment.mockImplementation(() => mockPayment);
 
-            // Mock findOne to return null (no existing payment found)
-            Payment.findOne.mockResolvedValueOnce(null);
-
             // WHEN: Processing with duplicate error but no record
             const response = await request(app)
                 .post('/api/payment/process')
                 .send(paymentData);
 
-            // THEN: Should return 500 error
-            expect(response.status).toBe(500);
-            expect(response.body).toHaveProperty('error', 'Duplicate key error but no payment record found.');
+            // THEN: Should return 409 error
+            expect(response.status).toBe(409);
+            expect(response.body).toHaveProperty('error', 'Payment creation conflict. Please try again.');
+            expect(response.body).toHaveProperty('shouldRetry', true);
         });
     });
 });
