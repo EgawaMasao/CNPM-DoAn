@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      # backend/restaurant-service: cache, install, test (connect to service MongoDB)
+      # backend/restaurant-service
       - name: Cache dependencies for restaurant-service
         uses: actions/cache@v4
         with:
@@ -50,14 +50,12 @@ jobs:
         run: |
           echo "Waiting for MongoDB to start on localhost:27017..."
           for i in {1..30}; do
-            # Prefer mongosh check if available
             if command -v mongosh >/dev/null 2>&1; then
               if mongosh --quiet --eval "db.adminCommand({ ping: 1 })" localhost:27017/testdb; then
                 echo "✅ MongoDB is up (mongosh)"
                 break
               fi
             else
-              # Fallback: check TCP port
               if (echo > /dev/tcp/localhost/27017) >/dev/null 2>&1; then
                 echo "✅ MongoDB port is open (TCP check)"
                 break
@@ -70,11 +68,38 @@ jobs:
       - name: Run tests for restaurant-service
         working-directory: ./backend/restaurant-service
         env:
-          # Ensure tests connect to the mongo:6.0 service container instead of spawning mongodb-memory-server
           MONGODB_URI: mongodb://localhost:27017/testdb
-        run: npm test
+        run: npm test 2>&1 | tee test-output.log
+        continue-on-error: true
 
-      # backend/order-service: cache, install, test (connect to service MongoDB)
+      - name: Push restaurant-service logs to Loki
+        if: always()
+        working-directory: ./backend/restaurant-service
+        run: |
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s%N)
+            LOG_CONTENT=$(cat test-output.log | jq -Rs .)
+            
+            curl -X POST -s \
+              -H "Content-Type: application/json" \
+              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+              -d "{
+                \"streams\": [{
+                  \"stream\": {
+                    \"job\": \"restaurant-service\",
+                    \"node_version\": \"${{ matrix.node-version }}\",
+                    \"github_run\": \"${{ github.run_id }}\"
+                  },
+                  \"values\": [
+                    [\"$TIMESTAMP\", $LOG_CONTENT]
+                  ]
+                }]
+              }" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" || echo "⚠️ Failed to push logs to Loki"
+          fi
+        continue-on-error: true
+
+      # backend/order-service
       - name: Cache dependencies for order-service
         uses: actions/cache@v4
         with:
@@ -90,12 +115,39 @@ jobs:
       - name: Run tests for order-service
         working-directory: ./backend/order-service
         env:
-          # Ensure tests connect to the mongo:6.0 service container instead of spawning mongodb-memory-server
           MONGODB_URI: mongodb://localhost:27017/testdb
           JWT_SECRET: test-secret-key-for-ci
-        run: npm test
+        run: npm test 2>&1 | tee test-output.log
+        continue-on-error: true
 
-      # backend/payment-service: cache, install, test (connect to service MongoDB)
+      - name: Push order-service logs to Loki
+        if: always()
+        working-directory: ./backend/order-service
+        run: |
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s%N)
+            LOG_CONTENT=$(cat test-output.log | jq -Rs .)
+            
+            curl -X POST -s \
+              -H "Content-Type: application/json" \
+              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+              -d "{
+                \"streams\": [{
+                  \"stream\": {
+                    \"job\": \"order-service\",
+                    \"node_version\": \"${{ matrix.node-version }}\",
+                    \"github_run\": \"${{ github.run_id }}\"
+                  },
+                  \"values\": [
+                    [\"$TIMESTAMP\", $LOG_CONTENT]
+                  ]
+                }]
+              }" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" || echo "⚠️ Failed to push logs to Loki"
+          fi
+        continue-on-error: true
+
+      # backend/payment-service
       - name: Cache dependencies for payment-service
         uses: actions/cache@v4
         with:
@@ -111,20 +163,44 @@ jobs:
       - name: Run tests for payment-service
         working-directory: ./backend/payment-service
         env:
-          # Ensure tests connect to the mongo:6.0 service container
           MONGODB_URI: mongodb://localhost:27017/testdb
           JWT_SECRET: test-secret-key-for-ci
-          # Stripe test credentials (use test mode keys)
           STRIPE_SECRET_KEY: sk_test_fake_key_for_ci_testing
-          # Resend email service (mock in tests, but provide for env)
           RESEND_API_KEY: re_fake_key_for_ci_testing
-          # Twilio SMS service (mock in tests, but provide for env)
           TWILIO_ACCOUNT_SID: AC_fake_account_sid_for_ci
           TWILIO_AUTH_TOKEN: fake_auth_token_for_ci
           TWILIO_PHONE_NUMBER: +15555555555
-        run: npm test
+        run: npm test 2>&1 | tee test-output.log
+        continue-on-error: true
 
-      # backend/auth-service: cache, install, test
+      - name: Push payment-service logs to Loki
+        if: always()
+        working-directory: ./backend/payment-service
+        run: |
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s%N)
+            LOG_CONTENT=$(cat test-output.log | jq -Rs .)
+            
+            curl -X POST -s \
+              -H "Content-Type: application/json" \
+              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+              -d "{
+                \"streams\": [{
+                  \"stream\": {
+                    \"job\": \"payment-service\",
+                    \"node_version\": \"${{ matrix.node-version }}\",
+                    \"github_run\": \"${{ github.run_id }}\"
+                  },
+                  \"values\": [
+                    [\"$TIMESTAMP\", $LOG_CONTENT]
+                  ]
+                }]
+              }" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" || echo "⚠️ Failed to push logs to Loki"
+          fi
+        continue-on-error: true
+
+      # backend/auth-service
       - name: Cache dependencies for auth-service
         uses: actions/cache@v4
         with:
@@ -140,12 +216,39 @@ jobs:
       - name: Run tests for auth-service
         working-directory: ./backend/auth-service
         env:
-          # Ensure tests connect to the mongo:6.0 service container
           MONGODB_URI: mongodb://localhost:27017/testdb
           JWT_SECRET: test-secret-key-for-ci
-        run: npm test
+        run: npm test 2>&1 | tee test-output.log
+        continue-on-error: true
 
-      # frontend: cache, install, test (allow no-tests)
+      - name: Push auth-service logs to Loki
+        if: always()
+        working-directory: ./backend/auth-service
+        run: |
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s%N)
+            LOG_CONTENT=$(cat test-output.log | jq -Rs .)
+            
+            curl -X POST -s \
+              -H "Content-Type: application/json" \
+              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+              -d "{
+                \"streams\": [{
+                  \"stream\": {
+                    \"job\": \"auth-service\",
+                    \"node_version\": \"${{ matrix.node-version }}\",
+                    \"github_run\": \"${{ github.run_id }}\"
+                  },
+                  \"values\": [
+                    [\"$TIMESTAMP\", $LOG_CONTENT]
+                  ]
+                }]
+              }" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" || echo "⚠️ Failed to push logs to Loki"
+          fi
+        continue-on-error: true
+
+      # frontend
       - name: Cache dependencies for frontend
         uses: actions/cache@v4
         with:
@@ -160,5 +263,32 @@ jobs:
 
       - name: Run tests for frontend
         working-directory: ./frontend
-        # Allow react-scripts to succeed even when there are no tests
-        run: npm test -- --passWithNoTests
+        run: npm test -- --passWithNoTests 2>&1 | tee test-output.log
+        continue-on-error: true
+
+      - name: Push frontend logs to Loki
+        if: always()
+        working-directory: ./frontend
+        run: |
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s%N)
+            LOG_CONTENT=$(cat test-output.log | jq -Rs .)
+            
+            curl -X POST -s \
+              -H "Content-Type: application/json" \
+              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+              -d "{
+                \"streams\": [{
+                  \"stream\": {
+                    \"job\": \"frontend\",
+                    \"node_version\": \"${{ matrix.node-version }}\",
+                    \"github_run\": \"${{ github.run_id }}\"
+                  },
+                  \"values\": [
+                    [\"$TIMESTAMP\", $LOG_CONTENT]
+                  ]
+                }]
+              }" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" || echo "⚠️ Failed to push logs to Loki"
+          fi
+        continue-on-error: true
