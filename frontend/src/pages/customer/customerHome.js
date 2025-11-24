@@ -120,7 +120,7 @@ function CustomerHome() {
                 src={
                   rest.profilePicture 
                     ? `${rest.profilePicture}`
-                    : "https://via.placeholder.com/300x200?text=Restaurant+Image"
+                    : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23ddd' width='300' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='18' fill='%23999'%3ERestaurant Image%3C/text%3E%3C/svg%3E"
                 }
                 alt={rest.name}
                 style={{
@@ -129,7 +129,7 @@ function CustomerHome() {
                   objectFit: "cover",
                 }}
                 onError={(e) => {
-                  e.target.src = "https://via.placeholder.com/300x200?text=Restaurant+Image";
+                  e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23ddd' width='300' height='200'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='18' fill='%23999'%3ERestaurant Image%3C/text%3E%3C/svg%3E";
                 }}
               />
               <div style={{ padding: "16px" }}>

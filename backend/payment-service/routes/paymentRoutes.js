@@ -28,33 +28,20 @@ router.post("/process", async (req, res) => {
         });
       }
       
-      // For pending payments, check if the payment intent is still valid
-      try {
-        const existingIntent = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
-        if (existingIntent && existingIntent.status === 'requires_payment_method') {
-          // Payment intent is still valid and can be reused
-          console.log("✅ Reusing existing valid payment intent");
-          return res.json({
-            clientSecret: payment.stripeClientSecret,
-            paymentId: payment._id,
-            disablePayment: false,
-          });
-        }
-      } catch (err) {
-        console.log("⚠️ Old payment intent invalid or expired, creating new one");
-      }
+      // For pending payments, always create fresh payment intent to avoid stale/expired intents
+      console.log("⚠️ Found pending payment - will create fresh payment intent");
       
-      // If we get here, old payment intent is expired/invalid - cancel it and create new one
+      // Try to cancel old payment intent
       try {
         await stripe.paymentIntents.cancel(payment.stripePaymentIntentId);
-        console.log("🗑️ Cancelled old payment intent");
+        console.log("🗑️ Cancelled old payment intent:", payment.stripePaymentIntentId);
       } catch (err) {
         console.log("Could not cancel old payment intent (may already be expired):", err.message);
       }
       
       // Delete old payment record so we can create a fresh one
       await Payment.deleteOne({ orderId });
-      console.log("🗑️ Deleted old payment record");
+      console.log("🗑️ Deleted old payment record, creating new one");
     }
 
     // Create a new PaymentIntent.
@@ -92,39 +79,13 @@ router.post("/process", async (req, res) => {
       disablePayment: false,
     });
   } catch (error) {
-    // If duplicate key error occurs, recover gracefully.
+    // If duplicate key error occurs, it means race condition - just return error to retry
     if (error.code === 11000) {
-      let existingPayment = await Payment.findOne({ orderId: req.body.orderId });
-      if (existingPayment) {
-        console.log("⚠️ Duplicate detected; checking payment status:", existingPayment);
-        if (existingPayment.status === "Paid") {
-          return res.status(200).json({
-            message: "✅ This order has already been paid successfully.",
-            paymentStatus: "Paid",
-            disablePayment: true,
-          });
-        }
-        
-        // Verify the payment intent is still valid before returning it
-        try {
-          const existingIntent = await stripe.paymentIntents.retrieve(existingPayment.stripePaymentIntentId);
-          if (existingIntent && existingIntent.status === 'requires_payment_method') {
-            console.log("✅ Returning valid existing payment intent");
-            return res.json({
-              clientSecret: existingPayment.stripeClientSecret,
-              paymentId: existingPayment._id,
-              disablePayment: false,
-            });
-          }
-        } catch (err) {
-          console.log("⚠️ Existing payment intent invalid, client should retry");
-          return res.status(409).json({ 
-            error: "Payment intent expired. Please refresh the page and try again.",
-            shouldRetry: true 
-          });
-        }
-      }
-      return res.status(500).json({ error: "Duplicate key error but no payment record found." });
+      console.log("⚠️ Duplicate key error - possible race condition");
+      return res.status(409).json({ 
+        error: "Payment creation conflict. Please try again.",
+        shouldRetry: true 
+      });
     }
     console.error("❌ Stripe Payment processing error:", error.message);
     res.status(500).json({ error: "❌ Payment processing failed. Please try again." });

@@ -20,10 +20,20 @@ const CheckoutForm = () => {
   const [disablePayment, setDisablePayment] = useState(false);
   const [customerInfo, setCustomerInfo] = useState(null); // Store customer info
   const hasInitialized = useRef(false); // Prevent duplicate API calls
+  
+  // Create stable orderId that doesn't change on re-render
+  const orderIdRef = useRef(`ORDER${Date.now()}`);
+  
+  // Debug: Log when clientSecret changes
+  useEffect(() => {
+    console.log("🔍 ClientSecret changed to:", clientSecret ? clientSecret.substring(0, 30) + "..." : "(empty)");
+  }, [clientSecret]);
 
-  const API_BASE_URL = process.env.REACT_APP_PAYMENT_SERVICE_URL || "";
-  const ORDER_SERVICE_URL = process.env.REACT_APP_ORDER_SERVICE_URL || "";
-  const AUTH_SERVICE_URL = process.env.REACT_APP_AUTH_SERVICE_URL || "";
+  // Use relative URLs to go through Ingress (browser requests)
+  // These URLs will be routed by Ingress to the appropriate backend services
+  const API_BASE_URL = ""; // Empty = use current domain, /api/payment/* routes through Ingress
+  const ORDER_SERVICE_URL = ""; // Empty = use current domain, /api/orders/* routes through Ingress
+  const AUTH_SERVICE_URL = ""; // Empty = use current domain, /api/auth/* routes through Ingress
 
   // Get order data from navigation state or localStorage
   const pendingOrderData = location.state?.orderData || JSON.parse(localStorage.getItem('pendingOrder') || '{}');
@@ -33,8 +43,8 @@ const CheckoutForm = () => {
   const amountInCents = Math.round(totalAmount * 100);
 
   // Prepare payment data - will be updated with customer info
-  const orderData = {
-    orderId: `ORDER${Date.now()}`,
+  const getOrderData = () => ({
+    orderId: orderIdRef.current,
     userId: pendingOrderData.customerId || "GUEST",
     amount: amountInCents / 100, // Convert back to dollars for display
     currency: "usd",
@@ -42,7 +52,7 @@ const CheckoutForm = () => {
     lastName: customerInfo?.lastName || pendingOrderData.customerId?.split(' ')[1] || "",
     email: customerInfo?.email || "customer@example.com",
     phone: customerInfo?.phone || "+1234567890",
-  };
+  });
 
   // Fetch customer profile data
   useEffect(() => {
@@ -81,6 +91,9 @@ const CheckoutForm = () => {
     }
     hasInitialized.current = true;
 
+    // Reset clientSecret to ensure fresh payment intent on page load
+    setClientSecret("");
+
     // Check if we have pending order data
     if (!pendingOrderData.items || pendingOrderData.items.length === 0) {
       setError("⚠️ No order data found. Please create an order first.");
@@ -92,14 +105,10 @@ const CheckoutForm = () => {
   }, []);
 
   const createPaymentIntent = async () => {
-    // Prevent duplicate calls
-    if (clientSecret) {
-      console.log("✅ Payment intent already exists, skipping creation");
-      return;
-    }
+    const orderData = getOrderData();
+    console.log("🔄 Creating payment intent for order:", orderData.orderId);
     
     try {
-      console.log("🔄 Creating payment intent for order:", orderData.orderId);
       const response = await axios.post(`${API_BASE_URL}/api/payment/process`, orderData);
       console.log("✅ Response from payment API:", response.data);
 
@@ -142,6 +151,7 @@ const CheckoutForm = () => {
     setError(null);
     setMessage("");
 
+    const orderData = getOrderData();
     const cardElement = elements.getElement(CardNumberElement);
     const { error, paymentMethod } = await stripe.createPaymentMethod({
       type: "card",
@@ -257,7 +267,7 @@ const CheckoutForm = () => {
           <p><strong>Delivery Address:</strong> {pendingOrderData.deliveryAddress}</p>
           <p><strong>Items:</strong> {pendingOrderData.items.length} item(s)</p>
           <p style={{ fontSize: "24px", fontWeight: "bold", marginTop: "10px" }}>
-            Total: ${orderData.amount.toFixed(2)}
+            Total: ${getOrderData().amount.toFixed(2)}
           </p>
         </div>
       )}
@@ -277,7 +287,7 @@ const CheckoutForm = () => {
           <CardCvcElement className="stripe-input" onChange={handleCardChange} />
         </div>
         <button type="submit" disabled={!stripe || loading || disablePayment} className="checkout-btn">
-          {loading ? <span className="spinner"></span> : `Pay $${orderData.amount.toFixed(2)}`}
+          {loading ? <span className="spinner"></span> : `Pay $${getOrderData().amount.toFixed(2)}`}
         </button>
         {error && <div className="checkout-error">{error}</div>}
         {message && <div className="checkout-success">{message}</div>}
