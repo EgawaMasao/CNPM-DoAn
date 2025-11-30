@@ -97,10 +97,10 @@ jobs:
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}" \
-              || echo "⚠️ Failed to push restaurant-service logs. Check LOKI_PASSWORD or LOKI_URL."
+              "${{ secrets.LOKI_URL_CNPM }}" \
+              || echo "⚠️ Failed to push restaurant-service logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
           fi
         continue-on-error: true
       
@@ -148,9 +148,9 @@ jobs:
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}" \
+              "${{ secrets.LOKI_URL_CNPM }}" \
               || echo "⚠️ Failed to push order-service logs. Check LOKI_PASSWORD or LOKI_URL."
           fi
         continue-on-error: true
@@ -204,10 +204,10 @@ jobs:
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}" \
-              || echo "⚠️ Failed to push payment-service logs. Check LOKI_PASSWORD or LOKI_URL."
+              "${{ secrets.LOKI_URL_CNPM }}" \
+              || echo "⚠️ Failed to push payment-service logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
           fi
         continue-on-error: true
 
@@ -255,10 +255,10 @@ jobs:
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}" \
-              || echo "⚠️ Failed to push auth-service logs. Check LOKI_PASSWORD or LOKI_URL."
+              "${{ secrets.LOKI_URL_CNPM }}" \
+              || echo "⚠️ Failed to push auth-service logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
           fi
         continue-on-error: true
 
@@ -303,9 +303,9 @@ jobs:
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}" \
-              || echo "⚠️ Failed to push frontend logs. Check LOKI_PASSWORD or LOKI_URL."
+              "${{ secrets.LOKI_URL_CNPM }}" \
+              || echo "⚠️ Failed to push frontend logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
           fi
         continue-on-error: true
