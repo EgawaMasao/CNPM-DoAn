@@ -130,8 +130,10 @@ jobs:
 
             echo "Pushing logs with status: $STATUS_LABEL"
             
-            curl -X POST \
+            # ĐÃ THÊM HEADER X-Scope-OrgID VÀ CỜ -v ĐỂ DEBUG
+            curl -v -X POST \
               -H "Content-Type: application/json" \
+              -H "X-Scope-OrgID: ${{ secrets.LOKI_USERNAME_CNPM }}" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
@@ -212,8 +214,10 @@ jobs:
 
             echo "Pushing logs with status: $STATUS_LABEL"
             
-            curl -X POST \
+            # ĐÃ THÊM HEADER X-Scope-OrgID VÀ CỜ -v ĐỂ DEBUG
+            curl -v -X POST \
               -H "Content-Type: application/json" \
+              -H "X-Scope-OrgID: ${{ secrets.LOKI_USERNAME_CNPM }}" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
@@ -299,8 +303,10 @@ jobs:
 
             echo "Pushing logs with status: $STATUS_LABEL"
             
-            curl -X POST \
+            # ĐÃ THÊM HEADER X-Scope-OrgID VÀ CỜ -v ĐỂ DEBUG
+            curl -v -X POST \
               -H "Content-Type: application/json" \
+              -H "X-Scope-OrgID: ${{ secrets.LOKI_USERNAME_CNPM }}" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
@@ -381,8 +387,10 @@ jobs:
 
             echo "Pushing logs with status: $STATUS_LABEL"
             
-            curl -X POST \
+            # ĐÃ THÊM HEADER X-Scope-OrgID VÀ CỜ -v ĐỂ DEBUG
+            curl -v -X POST \
               -H "Content-Type: application/json" \
+              -H "X-Scope-OrgID: ${{ secrets.LOKI_USERNAME_CNPM }}" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
@@ -460,8 +468,10 @@ jobs:
 
             echo "Pushing logs with status: $STATUS_LABEL"
             
-            curl -X POST \
+            # ĐÃ THÊM HEADER X-Scope-OrgID VÀ CỜ -v ĐỂ DEBUG
+            curl -v -X POST \
               -H "Content-Type: application/json" \
+              -H "X-Scope-OrgID: ${{ secrets.LOKI_USERNAME_CNPM }}" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
               --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
