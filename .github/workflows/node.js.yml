@@ -34,6 +34,13 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       # =======================================================================
+      # BƯỚC THÊM MỚI: Cài đặt jq để xử lý JSON an toàn
+      # =======================================================================
+      - name: 🛠️ Install jq for secure JSON processing
+        # Cài đặt jq, công cụ thiết yếu để escape log content
+        run: sudo apt-get update && sudo apt-get install jq -y
+
+      # =======================================================================
       # backend/restaurant-service
       # =======================================================================
       - name: 📦 Cache dependencies for restaurant-service
@@ -79,7 +86,6 @@ jobs:
         if: always()
         working-directory: ./backend/restaurant-service
         run: |
-          # 1. Kiểm tra kết quả test và đặt trạng thái hiển thị
           if [ "${{ steps.test_restaurant.outcome }}" == "success" ]; then
             STATUS_EMOJI="✅"
             STATUS_LABEL="SUCCESS"
@@ -88,22 +94,52 @@ jobs:
             STATUS_LABEL="FAILURE"
           fi
           
-          # 2. Định dạng logs và đẩy lên Loki
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
             
+            # Sử dụng jq để escape nội dung log an toàn
+            LOG_CONTENT_ESCAPED=$(cat test-output.log | jq -Rs .)
+            LOG_PREFIX="$STATUS_EMOJI $STATUS_LABEL: "
+            LOG_LINE_FINAL=$(echo "$LOG_PREFIX")$LOG_CONTENT_ESCAPED
+
+            PAYLOAD=$(jq -n \
+              --arg job "restaurant-service" \
+              --arg node_version "${{ matrix.node-version }}" \
+              --arg github_run "${{ github.run_id }}" \
+              --arg test_status "$STATUS_LABEL" \
+              --arg timestamp "$TIMESTAMP" \
+              --arg log_content "$LOG_LINE_FINAL" \
+              '{
+                "streams": [
+                  {
+                    "stream": {
+                      "job": $job,
+                      "node_version": $node_version,
+                      "github_run": $github_run,
+                      "test_status": $test_status
+                    },
+                    "values": [
+                      [
+                        $timestamp,
+                        $log_content
+                      ]
+                    ]
+                  }
+                ]
+              }')
+
             echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
-              || echo "⚠️ Failed to push restaurant-service logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
+              || echo "⚠️ Failed to push restaurant-service logs. Check LOKI config."
           fi
         continue-on-error: true
       
+      # --- Đã chỉnh sửa ---
       # =======================================================================
       # backend/order-service
       # =======================================================================
@@ -142,19 +178,50 @@ jobs:
           
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
             
+            # Sử dụng jq để escape nội dung log an toàn
+            LOG_CONTENT_ESCAPED=$(cat test-output.log | jq -Rs .)
+            LOG_PREFIX="$STATUS_EMOJI $STATUS_LABEL: "
+            LOG_LINE_FINAL=$(echo "$LOG_PREFIX")$LOG_CONTENT_ESCAPED
+
+            PAYLOAD=$(jq -n \
+              --arg job "order-service" \
+              --arg node_version "${{ matrix.node-version }}" \
+              --arg github_run "${{ github.run_id }}" \
+              --arg test_status "$STATUS_LABEL" \
+              --arg timestamp "$TIMESTAMP" \
+              --arg log_content "$LOG_LINE_FINAL" \
+              '{
+                "streams": [
+                  {
+                    "stream": {
+                      "job": $job,
+                      "node_version": $node_version,
+                      "github_run": $github_run,
+                      "test_status": $test_status
+                    },
+                    "values": [
+                      [
+                        $timestamp,
+                        $log_content
+                      ]
+                    ]
+                  }
+                ]
+              }')
+
             echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
-              || echo "⚠️ Failed to push order-service logs. Check LOKI_PASSWORD or LOKI_URL."
+              || echo "⚠️ Failed to push order-service logs. Check LOKI config."
           fi
         continue-on-error: true
 
+      # --- Đã chỉnh sửa ---
       # =======================================================================
       # backend/payment-service
       # =======================================================================
@@ -198,19 +265,50 @@ jobs:
           
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
             
+            # Sử dụng jq để escape nội dung log an toàn
+            LOG_CONTENT_ESCAPED=$(cat test-output.log | jq -Rs .)
+            LOG_PREFIX="$STATUS_EMOJI $STATUS_LABEL: "
+            LOG_LINE_FINAL=$(echo "$LOG_PREFIX")$LOG_CONTENT_ESCAPED
+
+            PAYLOAD=$(jq -n \
+              --arg job "payment-service" \
+              --arg node_version "${{ matrix.node-version }}" \
+              --arg github_run "${{ github.run_id }}" \
+              --arg test_status "$STATUS_LABEL" \
+              --arg timestamp "$TIMESTAMP" \
+              --arg log_content "$LOG_LINE_FINAL" \
+              '{
+                "streams": [
+                  {
+                    "stream": {
+                      "job": $job,
+                      "node_version": $node_version,
+                      "github_run": $github_run,
+                      "test_status": $test_status
+                    },
+                    "values": [
+                      [
+                        $timestamp,
+                        $log_content
+                      ]
+                    ]
+                  }
+                ]
+              }')
+
             echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
-              || echo "⚠️ Failed to push payment-service logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
+              || echo "⚠️ Failed to push payment-service logs. Check LOKI config."
           fi
         continue-on-error: true
 
+      # --- Đã chỉnh sửa ---
       # =======================================================================
       # backend/auth-service
       # =======================================================================
@@ -249,19 +347,50 @@ jobs:
           
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
             
+            # Sử dụng jq để escape nội dung log an toàn
+            LOG_CONTENT_ESCAPED=$(cat test-output.log | jq -Rs .)
+            LOG_PREFIX="$STATUS_EMOJI $STATUS_LABEL: "
+            LOG_LINE_FINAL=$(echo "$LOG_PREFIX")$LOG_CONTENT_ESCAPED
+
+            PAYLOAD=$(jq -n \
+              --arg job "auth-service" \
+              --arg node_version "${{ matrix.node-version }}" \
+              --arg github_run "${{ github.run_id }}" \
+              --arg test_status "$STATUS_LABEL" \
+              --arg timestamp "$TIMESTAMP" \
+              --arg log_content "$LOG_LINE_FINAL" \
+              '{
+                "streams": [
+                  {
+                    "stream": {
+                      "job": $job,
+                      "node_version": $node_version,
+                      "github_run": $github_run,
+                      "test_status": $test_status
+                    },
+                    "values": [
+                      [
+                        $timestamp,
+                        $log_content
+                      ]
+                    ]
+                  }
+                ]
+              }')
+
             echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
-              || echo "⚠️ Failed to push auth-service logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
+              || echo "⚠️ Failed to push auth-service logs. Check LOKI config."
           fi
         continue-on-error: true
 
+      # --- Đã chỉnh sửa ---
       # =======================================================================
       # frontend
       # =======================================================================
@@ -297,15 +426,45 @@ jobs:
           
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
             
+            # Sử dụng jq để escape nội dung log an toàn
+            LOG_CONTENT_ESCAPED=$(cat test-output.log | jq -Rs .)
+            LOG_PREFIX="$STATUS_EMOJI $STATUS_LABEL: "
+            LOG_LINE_FINAL=$(echo "$LOG_PREFIX")$LOG_CONTENT_ESCAPED
+
+            PAYLOAD=$(jq -n \
+              --arg job "frontend" \
+              --arg node_version "${{ matrix.node-version }}" \
+              --arg github_run "${{ github.run_id }}" \
+              --arg test_status "$STATUS_LABEL" \
+              --arg timestamp "$TIMESTAMP" \
+              --arg log_content "$LOG_LINE_FINAL" \
+              '{
+                "streams": [
+                  {
+                    "stream": {
+                      "job": $job,
+                      "node_version": $node_version,
+                      "github_run": $github_run,
+                      "test_status": $test_status
+                    },
+                    "values": [
+                      [
+                        $timestamp,
+                        $log_content
+                      ]
+                    ]
+                  }
+                ]
+              }')
+
             echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD_CNPM }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              --data-raw "$PAYLOAD" \
               "${{ secrets.LOKI_URL_CNPM }}/api/prom/push" \
-              || echo "⚠️ Failed to push frontend logs. Check LOKI_PASSWORD_CNPM or LOKI_URL_CNPM."
+              || echo "⚠️ Failed to push frontend logs. Check LOKI config."
           fi
         continue-on-error: true
