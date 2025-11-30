@@ -25,16 +25,18 @@ jobs:
           --health-retries 10
 
     steps:
-      - name: Checkout code
+      - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: ⚙️ Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
+      # =======================================================================
       # backend/restaurant-service
-      - name: Cache dependencies for restaurant-service
+      # =======================================================================
+      - name: 📦 Cache dependencies for restaurant-service
         uses: actions/cache@v4
         with:
           path: ./backend/restaurant-service/node_modules
@@ -42,11 +44,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-restaurant-${{ matrix.node-version }}-
 
-      - name: Install dependencies for restaurant-service
+      - name: 💿 Install dependencies for restaurant-service
         working-directory: ./backend/restaurant-service
         run: npm install
 
-      - name: Wait for MongoDB to be ready
+      - name: ⏳ Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB to start on localhost:27017..."
           for i in {1..30}; do
@@ -65,32 +67,47 @@ jobs:
             sleep 2
           done
 
-      - name: Run tests for restaurant-service
+      - name: 🧪 Run tests for restaurant-service
+        id: test_restaurant
         working-directory: ./backend/restaurant-service
         env:
           MONGODB_URI: mongodb://localhost:27017/testdb
         run: npm test 2>&1 | tee test-output.log
         continue-on-error: true
 
-      - name: Push restaurant-service logs to Loki
+      - name: 📤 Push restaurant-service logs to Loki
         if: always()
         working-directory: ./backend/restaurant-service
         run: |
+          # 1. Kiểm tra kết quả test và đặt trạng thái hiển thị
+          if [ "${{ steps.test_restaurant.outcome }}" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_LABEL="SUCCESS"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_LABEL="FAILURE"
+          fi
+          
+          # 2. Định dạng logs và đẩy lên Loki
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
+            
+            echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-              || echo "⚠️ Failed to push restaurant-service logs"
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              "${{ secrets.LOKI_URL }}" \
+              || echo "⚠️ Failed to push restaurant-service logs. Check LOKI_PASSWORD or LOKI_URL."
           fi
         continue-on-error: true
-
+      
+      # =======================================================================
       # backend/order-service
-      - name: Cache dependencies for order-service
+      # =======================================================================
+      - name: 📦 Cache dependencies for order-service
         uses: actions/cache@v4
         with:
           path: ./backend/order-service/node_modules
@@ -98,11 +115,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-order-${{ matrix.node-version }}-
 
-      - name: Install dependencies for order-service
+      - name: 💿 Install dependencies for order-service
         working-directory: ./backend/order-service
         run: npm install
 
-      - name: Run tests for order-service
+      - name: 🧪 Run tests for order-service
+        id: test_order
         working-directory: ./backend/order-service
         env:
           MONGODB_URI: mongodb://localhost:27017/testdb
@@ -110,25 +128,37 @@ jobs:
         run: npm test 2>&1 | tee test-output.log
         continue-on-error: true
 
-      - name: Push order-service logs to Loki
+      - name: 📤 Push order-service logs to Loki
         if: always()
         working-directory: ./backend/order-service
         run: |
+          if [ "${{ steps.test_order.outcome }}" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_LABEL="SUCCESS"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_LABEL="FAILURE"
+          fi
+          
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
+            
+            echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-              || echo "⚠️ Failed to push order-service logs"
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              "${{ secrets.LOKI_URL }}" \
+              || echo "⚠️ Failed to push order-service logs. Check LOKI_PASSWORD or LOKI_URL."
           fi
         continue-on-error: true
 
+      # =======================================================================
       # backend/payment-service
-      - name: Cache dependencies for payment-service
+      # =======================================================================
+      - name: 📦 Cache dependencies for payment-service
         uses: actions/cache@v4
         with:
           path: ./backend/payment-service/node_modules
@@ -136,11 +166,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-payment-${{ matrix.node-version }}-
 
-      - name: Install dependencies for payment-service
+      - name: 💿 Install dependencies for payment-service
         working-directory: ./backend/payment-service
         run: npm install
 
-      - name: Run tests for payment-service
+      - name: 🧪 Run tests for payment-service
+        id: test_payment
         working-directory: ./backend/payment-service
         env:
           MONGODB_URI: mongodb://localhost:27017/testdb
@@ -153,25 +184,37 @@ jobs:
         run: npm test 2>&1 | tee test-output.log
         continue-on-error: true
 
-      - name: Push payment-service logs to Loki
+      - name: 📤 Push payment-service logs to Loki
         if: always()
         working-directory: ./backend/payment-service
         run: |
+          if [ "${{ steps.test_payment.outcome }}" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_LABEL="SUCCESS"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_LABEL="FAILURE"
+          fi
+          
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
+            
+            echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-              || echo "⚠️ Failed to push payment-service logs"
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              "${{ secrets.LOKI_URL }}" \
+              || echo "⚠️ Failed to push payment-service logs. Check LOKI_PASSWORD or LOKI_URL."
           fi
         continue-on-error: true
 
+      # =======================================================================
       # backend/auth-service
-      - name: Cache dependencies for auth-service
+      # =======================================================================
+      - name: 📦 Cache dependencies for auth-service
         uses: actions/cache@v4
         with:
           path: ./backend/auth-service/node_modules
@@ -179,11 +222,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-auth-${{ matrix.node-version }}-
 
-      - name: Install dependencies for auth-service
+      - name: 💿 Install dependencies for auth-service
         working-directory: ./backend/auth-service
         run: npm install
 
-      - name: Run tests for auth-service
+      - name: 🧪 Run tests for auth-service
+        id: test_auth
         working-directory: ./backend/auth-service
         env:
           MONGODB_URI: mongodb://localhost:27017/testdb
@@ -191,25 +235,37 @@ jobs:
         run: npm test 2>&1 | tee test-output.log
         continue-on-error: true
 
-      - name: Push auth-service logs to Loki
+      - name: 📤 Push auth-service logs to Loki
         if: always()
         working-directory: ./backend/auth-service
         run: |
+          if [ "${{ steps.test_auth.outcome }}" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_LABEL="SUCCESS"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_LABEL="FAILURE"
+          fi
+          
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
+            
+            echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-              || echo "⚠️ Failed to push auth-service logs"
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              "${{ secrets.LOKI_URL }}" \
+              || echo "⚠️ Failed to push auth-service logs. Check LOKI_PASSWORD or LOKI_URL."
           fi
         continue-on-error: true
 
+      # =======================================================================
       # frontend
-      - name: Cache dependencies for frontend
+      # =======================================================================
+      - name: 📦 Cache dependencies for frontend
         uses: actions/cache@v4
         with:
           path: ./frontend/node_modules
@@ -217,28 +273,39 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-frontend-${{ matrix.node-version }}-
 
-      - name: Install dependencies for frontend
+      - name: 💿 Install dependencies for frontend
         working-directory: ./frontend
         run: npm install
 
-      - name: Run tests for frontend
+      - name: 🧪 Run tests for frontend
+        id: test_frontend
         working-directory: ./frontend
         run: npm test -- --passWithNoTests 2>&1 | tee test-output.log
         continue-on-error: true
 
-      - name: Push frontend logs to Loki
+      - name: 📤 Push frontend logs to Loki
         if: always()
         working-directory: ./frontend
         run: |
+          if [ "${{ steps.test_frontend.outcome }}" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_LABEL="SUCCESS"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_LABEL="FAILURE"
+          fi
+          
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')
+            
+            echo "Pushing logs with status: $STATUS_LABEL"
             
             curl -X POST \
               -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-              || echo "⚠️ Failed to push frontend logs"
+              -u "${{ secrets.LOKI_USERNAME_CNPM }}:${{ secrets.LOKI_PASSWORD }}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\",\"test_status\":\"${STATUS_LABEL}\"},\"values\":[[\"$TIMESTAMP\",\"$STATUS_EMOJI $STATUS_LABEL: $LOG_CONTENT\"]]}]}" \
+              "${{ secrets.LOKI_URL }}" \
+              || echo "⚠️ Failed to push frontend logs. Check LOKI_PASSWORD or LOKI_URL."
           fi
         continue-on-error: true
