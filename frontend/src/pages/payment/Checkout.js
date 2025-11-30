@@ -5,9 +5,18 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../../styles/checkout.css";
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe("pk_test_51SU2MAKG4X6kws9TRlkXsZbacIvbuDikYxvtl6xCRNZoYvDJTCae91Mw8N7pq6avLmjYYSOXYMjfT426U61KXTJt00Ew95UeXa");
 
 const CheckoutForm = () => {
+  // Xóa mọi key localStorage liên quan đến Stripe khi vào trang checkout
+  useEffect(() => {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.includes("stripe") || key.includes("link.auth_session_client_secret")) {
+        localStorage.removeItem(key);
+      }
+    });
+  }, []);
+
   const stripe = useStripe();
   const elements = useElements();
   const location = useLocation();
