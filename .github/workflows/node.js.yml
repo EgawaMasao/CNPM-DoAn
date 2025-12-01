@@ -101,12 +101,12 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push restaurant-service logs"
           fi
@@ -159,12 +159,12 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push order-service logs"
           fi
@@ -222,12 +222,12 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push payment-service logs"
           fi
@@ -280,12 +280,12 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push auth-service logs"
           fi
@@ -335,12 +335,12 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g' | tr '\n' ' ')
+            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$LOG_CONTENT\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push frontend logs"
           fi
