@@ -49,6 +49,9 @@ jobs:
         working-directory: ./backend/restaurant-service
         run: npm install
 
+      - name: "─────────────────────────────────────"
+        run: echo "🍽️  Restaurant Service Setup Complete"
+
       - name: ⏳ Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB to start on localhost:27017..."
@@ -101,16 +104,38 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+            done
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push restaurant-service logs"
           fi
         continue-on-error: true
+
+      - name: "═══════════════════════════════════════════════════════════"
+        run: echo "✅ Restaurant Service Complete - Moving to Order Service"
 
       # backend/order-service
       - name: 📦 Order Service - Cache dependencies
@@ -159,16 +184,38 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+            done
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push order-service logs"
           fi
         continue-on-error: true
+
+      - name: "═══════════════════════════════════════════════════════════"
+        run: echo "✅ Order Service Complete - Moving to Payment Service"
 
       # backend/payment-service
       - name: 💳 Payment Service - Cache dependencies
@@ -222,16 +269,38 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+            done
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push payment-service logs"
           fi
         continue-on-error: true
+
+      - name: "═══════════════════════════════════════════════════════════"
+        run: echo "✅ Payment Service Complete - Moving to Auth Service"
 
       # backend/auth-service
       - name: 🔐 Auth Service - Cache dependencies
@@ -280,16 +349,38 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+            done
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push auth-service logs"
           fi
         continue-on-error: true
+
+      - name: "═══════════════════════════════════════════════════════════"
+        run: echo "✅ Auth Service Complete - Moving to Frontend"
 
       # frontend
       - name: 🎨 Frontend - Cache dependencies
@@ -335,13 +426,35 @@ jobs:
         run: |
           if [ -f test-output.log ]; then
             TIMESTAMP=$(date +%s000000000)
-            LOG_CONTENT=$(cat test-output.log | sed 's/"/\\"/g')
             
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+            done
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$LOG_CONTENT\" | jq -Rs .)]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
               && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push frontend logs"
           fi
         continue-on-error: true
+
+      - name: "═══════════════════════════════════════════════════════════"
+        run: echo "✅ ALL TESTS COMPLETED! ✅"
