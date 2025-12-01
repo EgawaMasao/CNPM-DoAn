@@ -49,8 +49,8 @@ jobs:
         working-directory: ./backend/restaurant-service
         run: npm install
 
-      - name: "─────────────────────────────────────"
-        run: echo "🍽️  Restaurant Service Setup Complete"
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Install Dependencies Complete"
 
       - name: ⏳ Wait for MongoDB to be ready
         run: |
@@ -71,6 +71,9 @@ jobs:
             sleep 2
           done
 
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ MongoDB Ready"
+
       - name: 🍽️ Restaurant Service - Run tests
         working-directory: ./backend/restaurant-service
         env:
@@ -82,6 +85,9 @@ jobs:
           echo "::endgroup::"
           exit $TEST_EXIT_CODE
         continue-on-error: true
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Tests Executed"
 
       - name: 🍽️ Restaurant Service - Upload test results
         if: always()
@@ -97,6 +103,9 @@ jobs:
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Results Uploaded to Summary"
 
       - name: 🍽️ Restaurant Service - Push logs to Loki
         if: always()
@@ -146,9 +155,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-order-${{ matrix.node-version }}-
 
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Cache Setup Complete"
+
       - name: 📦 Order Service - Install dependencies
         working-directory: ./backend/order-service
         run: npm install
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Install Dependencies Complete"
 
       - name: 📦 Order Service - Run tests
         working-directory: ./backend/order-service
@@ -162,6 +177,9 @@ jobs:
           echo "::endgroup::"
           exit $TEST_EXIT_CODE
         continue-on-error: true
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Tests Executed"
 
       - name: 📦 Order Service - Upload test results
         if: always()
@@ -177,6 +195,9 @@ jobs:
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Results Uploaded to Summary"
 
       - name: 📦 Order Service - Push logs to Loki
         if: always()
@@ -226,9 +247,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-payment-${{ matrix.node-version }}-
 
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Cache Setup Complete"
+
       - name: 💳 Payment Service - Install dependencies
         working-directory: ./backend/payment-service
         run: npm install
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Install Dependencies Complete"
 
       - name: 💳 Payment Service - Run tests
         working-directory: ./backend/payment-service
@@ -248,6 +275,9 @@ jobs:
           exit $TEST_EXIT_CODE
         continue-on-error: true
 
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Tests Executed"
+
       - name: 💳 Payment Service - Upload test results
         if: always()
         working-directory: ./backend/payment-service
@@ -262,6 +292,9 @@ jobs:
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Results Uploaded to Summary"
 
       - name: 💳 Payment Service - Push logs to Loki
         if: always()
@@ -311,9 +344,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-auth-${{ matrix.node-version }}-
 
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Cache Setup Complete"
+
       - name: 🔐 Auth Service - Install dependencies
         working-directory: ./backend/auth-service
         run: npm install
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Install Dependencies Complete"
 
       - name: 🔐 Auth Service - Run tests
         working-directory: ./backend/auth-service
@@ -327,6 +366,9 @@ jobs:
           echo "::endgroup::"
           exit $TEST_EXIT_CODE
         continue-on-error: true
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Tests Executed"
 
       - name: 🔐 Auth Service - Upload test results
         if: always()
@@ -342,6 +384,9 @@ jobs:
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Results Uploaded to Summary"
 
       - name: 🔐 Auth Service - Push logs to Loki
         if: always()
@@ -391,9 +436,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-frontend-${{ matrix.node-version }}-
 
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Cache Setup Complete"
+
       - name: 🎨 Frontend - Install dependencies
         working-directory: ./frontend
         run: npm install
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Install Dependencies Complete"
 
       - name: 🎨 Frontend - Run tests
         working-directory: ./frontend
@@ -404,6 +455,9 @@ jobs:
           echo "::endgroup::"
           exit $TEST_EXIT_CODE
         continue-on-error: true
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Tests Executed"
 
       - name: 🎨 Frontend - Upload test results
         if: always()
@@ -419,6 +473,9 @@ jobs:
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: "───────────────────────────────────────────────────────────"
+        run: echo "✅ Results Uploaded to Summary"
 
       - name: 🎨 Frontend - Push logs to Loki
         if: always()
