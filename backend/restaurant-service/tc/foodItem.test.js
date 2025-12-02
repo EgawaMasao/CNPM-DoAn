@@ -58,7 +58,7 @@ test('GET /api/food-items/restaurant/:restaurantId trả về đúng các food i
     restaurant: restaurantId,
     name: 'test 2',
     description: 'test2',
-    price: 1000,
+    price: 1000a,
     image: '/uploads/1761004850538-75857323.png',
     category: 'Drinks',
     availability: true
