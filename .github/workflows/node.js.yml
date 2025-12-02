@@ -111,59 +111,35 @@ jobs:
         if: always()
         working-directory: ./backend/restaurant-service
         run: |
-          if [ ! -f test-output.log ]; then
-            echo "⚠️ No test-output.log found, creating default log" > test-output.log
-          fi
-          TIMESTAMP=$(date +%s000000000)
-          
-          # Extract test summary
-          TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
-          PASSED_COUNT=$(grep -c " PASS " test-output.log || echo "0")
-          FAILED_COUNT=$(grep -c " FAIL " test-output.log || echo "0")
-          
-          # Push individual test suite results
-          grep "PASS\|FAIL" test-output.log | while read line; do
-            STATUS=$(echo "$line" | grep -o "PASS\|FAIL" | head -1)
-            SUITE_NAME=$(echo "$line" | sed 's/ PASS / /g; s/ FAIL / /g' | xargs)
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s000000000)
             
-            curl -X POST \
-              -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"test_status\":\"$STATUS\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"Test: $SUITE_NAME\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-          done
-          
-          # Extract and push detailed error information for failed tests
-          if grep -q "● " test-output.log; then
-            grep -A 10 "● " test-output.log | while IFS= read -r error_line; do
-              if [ ! -z "$error_line" ]; then
-                ERROR_MSG=$(echo "$error_line" | sed 's/"/\\"/g')
-                curl -X POST \
-                  -H "Content-Type: application/json" \
-                  -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-                  --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"type\":\"error\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$ERROR_MSG\"]]}]}" \
-                  "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-              fi
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
             done
-          fi
-          
-          # Push summary
-          SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-            --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
-            "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-            && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push restaurant-service logs"
-          
-          # Push a default message if no logs were parsed
-          if [ "$TEST_SUITES" -eq 0 ]; then
-            DEFAULT_MSG="No test results found in logs"
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"type\":\"fallback\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$DEFAULT_MSG\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"restaurant-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
+              && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push restaurant-service logs"
           fi
         continue-on-error: true
 
@@ -227,61 +203,35 @@ jobs:
         if: always()
         working-directory: ./backend/order-service
         run: |
-          if [ ! -f test-output.log ]; then
-            echo "⚠️ No test-output.log found, creating default log" > test-output.log
-          fi
-          TIMESTAMP=$(date +%s000000000)
-          
-          # Extract test summary from Jest output format: PASS/FAIL path/to/test.js
-          TEST_SUITES=$(grep -c "^PASS \|^FAIL " test-output.log || echo "0")
-          PASSED_COUNT=$(grep -c "^PASS " test-output.log || echo "0")
-          FAILED_COUNT=$(grep -c "^FAIL " test-output.log || echo "0")
-          
-          # Push individual test suite results
-          grep "^PASS \|^FAIL " test-output.log | while read line; do
-            STATUS=$(echo "$line" | awk '{print $1}')
-            SUITE_NAME=$(echo "$line" | sed 's/^PASS //; s/^FAIL //' | xargs)
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s000000000)
             
-            curl -X POST \
-              -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"test_status\":\"$STATUS\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"Test: $SUITE_NAME\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-          done
-          
-          # Extract and push detailed error information for failed tests
-          if grep -q "●" test-output.log; then
-            grep -A 15 "●" test-output.log | while IFS= read -r error_line; do
-              if [ ! -z "$error_line" ] && [ "$error_line" != "●" ]; then
-                ERROR_MSG=$(echo "$error_line" | sed 's/"/\\"/g' | head -c 500)
-                if [ ! -z "$ERROR_MSG" ]; then
-                  curl -X POST \
-                    -H "Content-Type: application/json" \
-                    -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-                    --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"type\":\"error\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$ERROR_MSG\"]]}]}" \
-                    "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-                fi
-              fi
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
             done
-          fi
-          
-          # Push summary
-          SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-            --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
-            "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-            && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push order-service logs"
-          
-          # Push a default message if no logs were parsed
-          if [ "$TEST_SUITES" -eq 0 ]; then
-            DEFAULT_MSG="No test results found in logs"
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"type\":\"fallback\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$DEFAULT_MSG\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"order-service\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
+              && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push order-service logs"
           fi
         continue-on-error: true
 
@@ -355,38 +305,23 @@ jobs:
           fi
           TIMESTAMP=$(date +%s000000000)
           
-          # Extract test summary from Jest output format: PASS/FAIL path/to/test.js
-          TEST_SUITES=$(grep -c "^PASS \|^FAIL " test-output.log || echo "0")
-          PASSED_COUNT=$(grep -c "^PASS " test-output.log || echo "0")
-          FAILED_COUNT=$(grep -c "^FAIL " test-output.log || echo "0")
+          # Extract test summary
+          TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+          PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+          FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
           
-          # Push individual test suite results
-          grep "^PASS \|^FAIL " test-output.log | while read line; do
-            STATUS=$(echo "$line" | awk '{print $1}')
-            SUITE_NAME=$(echo "$line" | sed 's/^PASS //; s/^FAIL //' | xargs)
+          # Split logs by test suites
+          awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+            SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+            SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+            SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"test_status\":\"$STATUS\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"Test: $SUITE_NAME\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
           done
-          
-          # Extract and push detailed error information for failed tests
-          if grep -q "●" test-output.log; then
-            grep -A 15 "●" test-output.log | while IFS= read -r error_line; do
-              if [ ! -z "$error_line" ] && [ "$error_line" != "●" ]; then
-                ERROR_MSG=$(echo "$error_line" | sed 's/"/\\"/g' | head -c 500)
-                if [ ! -z "$ERROR_MSG" ]; then
-                  curl -X POST \
-                    -H "Content-Type: application/json" \
-                    -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-                    --data-raw "{\"streams\":[{\"stream\":{\"job\":\"payment-service\",\"type\":\"error\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$ERROR_MSG\"]]}]}" \
-                    "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-                fi
-              fi
-            done
-          fi
           
           # Push summary
           SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
@@ -473,38 +408,23 @@ jobs:
           fi
           TIMESTAMP=$(date +%s000000000)
           
-          # Extract test summary from Jest output format: PASS/FAIL path/to/test.js
-          TEST_SUITES=$(grep -c "^PASS \|^FAIL " test-output.log || echo "0")
-          PASSED_COUNT=$(grep -c "^PASS " test-output.log || echo "0")
-          FAILED_COUNT=$(grep -c "^FAIL " test-output.log || echo "0")
+          # Extract test summary
+          TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+          PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+          FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
           
-          # Push individual test suite results
-          grep "^PASS \|^FAIL " test-output.log | while read line; do
-            STATUS=$(echo "$line" | awk '{print $1}')
-            SUITE_NAME=$(echo "$line" | sed 's/^PASS //; s/^FAIL //' | xargs)
+          # Split logs by test suites
+          awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+            SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+            SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+            SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
             
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"test_status\":\"$STATUS\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"Test: $SUITE_NAME\"]]}]}" \
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
               "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
           done
-          
-          # Extract and push detailed error information for failed tests
-          if grep -q "●" test-output.log; then
-            grep -A 15 "●" test-output.log | while IFS= read -r error_line; do
-              if [ ! -z "$error_line" ] && [ "$error_line" != "●" ]; then
-                ERROR_MSG=$(echo "$error_line" | sed 's/"/\\"/g' | head -c 500)
-                if [ ! -z "$ERROR_MSG" ]; then
-                  curl -X POST \
-                    -H "Content-Type: application/json" \
-                    -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-                    --data-raw "{\"streams\":[{\"stream\":{\"job\":\"auth-service\",\"type\":\"error\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$ERROR_MSG\"]]}]}" \
-                    "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-                fi
-              fi
-            done
-          fi
           
           # Push summary
           SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
@@ -583,59 +503,35 @@ jobs:
         if: always()
         working-directory: ./frontend
         run: |
-          if [ ! -f test-output.log ]; then
-            echo "⚠️ No test-output.log found, creating default log" > test-output.log
-          fi
-          TIMESTAMP=$(date +%s000000000)
-          
-          # Extract test summary
-          TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
-          PASSED_COUNT=$(grep -c " PASS " test-output.log || echo "0")
-          FAILED_COUNT=$(grep -c " FAIL " test-output.log || echo "0")
-          
-          # Push individual test suite results
-          grep "PASS\|FAIL" test-output.log | while read line; do
-            STATUS=$(echo "$line" | grep -o "PASS\|FAIL" | head -1)
-            SUITE_NAME=$(echo "$line" | sed 's/ PASS / /g; s/ FAIL / /g' | xargs)
+          if [ -f test-output.log ]; then
+            TIMESTAMP=$(date +%s000000000)
             
-            curl -X POST \
-              -H "Content-Type: application/json" \
-              -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"test_status\":\"$STATUS\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"Test: $SUITE_NAME\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-          done
-          
-          # Extract and push detailed error information for failed tests
-          if grep -q "● " test-output.log; then
-            grep -A 10 "● " test-output.log | while IFS= read -r error_line; do
-              if [ ! -z "$error_line" ]; then
-                ERROR_MSG=$(echo "$error_line" | sed 's/"/\\"/g')
-                curl -X POST \
-                  -H "Content-Type: application/json" \
-                  -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-                  --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"type\":\"error\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$ERROR_MSG\"]]}]}" \
-                  "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
-              fi
+            # Extract test summary
+            TEST_SUITES=$(grep -c "PASS\|FAIL" test-output.log || echo "0")
+            PASSED_COUNT=$(grep -c "PASS " test-output.log || echo "0")
+            FAILED_COUNT=$(grep -c "FAIL " test-output.log || echo "0")
+            
+            # Split logs by test suites
+            awk '/^PASS |^FAIL / {print NR": "$0}' test-output.log | while read line; do
+              SUITE_NAME=$(echo "$line" | cut -d: -f2- | sed 's/^[[:space:]]*//g')
+              SUITE_LOG=$(grep -A 50 "$SUITE_NAME" test-output.log | head -60)
+              SUITE_CONTENT=$(echo "$SUITE_LOG" | sed 's/"/\\"/g')
+              
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
+                --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"suite\":\"$(echo \"$SUITE_NAME\" | head -c 50)\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUITE_CONTENT\" | jq -Rs .)]]}]}" \
+                "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
             done
-          fi
-          
-          # Push summary
-          SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-            --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
-            "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
-            && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push frontend logs"
-          
-          # Push a default message if no logs were parsed
-          if [ "$TEST_SUITES" -eq 0 ]; then
-            DEFAULT_MSG="No test results found in logs"
+            
+            # Push summary
+            SUMMARY=$(echo "📊 Test Suites: $TEST_SUITES | ✅ Passed: $PASSED_COUNT | ❌ Failed: $FAILED_COUNT")
             curl -X POST \
               -H "Content-Type: application/json" \
               -u "${{ secrets.LOKI_USERNAME }}:${{ secrets.LOKI_PASSWORD }}" \
-              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"type\":\"fallback\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",\"$DEFAULT_MSG\"]]}]}" \
-              "${{ secrets.LOKI_URL }}/loki/api/v1/push" 2>/dev/null
+              --data-raw "{\"streams\":[{\"stream\":{\"job\":\"frontend\",\"type\":\"summary\",\"node_version\":\"${{ matrix.node-version }}\",\"github_run\":\"${{ github.run_id }}\"},\"values\":[[\"$TIMESTAMP\",$(echo \"$SUMMARY\" | jq -Rs .)]]}]}" \
+              "${{ secrets.LOKI_URL }}/loki/api/v1/push" \
+              && echo "✅ Logs pushed successfully" || echo "⚠️ Failed to push frontend logs"
           fi
         continue-on-error: true
 
