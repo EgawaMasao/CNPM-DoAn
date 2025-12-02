@@ -47,7 +47,7 @@ test('GET /api/food-items/restaurant/:restaurantId trả về đúng các food i
     restaurant: restaurantId,
     name: 'tes1',
     description: 'tes1',
-    price: 1000,
+    price: 1000a,
     image: '/uploads/1761004777984-992290185.png',
     category: 'FastFood',
     availability: true
